@@ -5,3 +5,5 @@ build/
 out/
 .vscode/
 backup.sql
+backups/
+.claude/settings.local.json
