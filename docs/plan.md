@@ -34,7 +34,8 @@
 ## M3. AI 연결
 ### Claude Desktop MCP 연결
 - 배경: 지금은 이 폴더에서 연 Claude Code만 Quack을 검색할 수 있다.
-- 범위: `npx mcp-remote http://localhost:8765/mcp`를 Claude Desktop 설정에 등록하고, 그 방법을 README에 적는다.
+- 범위: `scripts/mcp-bridge.mjs`(stdio 중계)를 Claude Desktop 설정에 등록하고, 그 방법을 README에 적는다.
+- 진행: 중계 스크립트, 등록 스크립트(`quack desktop`), 스모크 검사까지 끝. 이 PC에서 Desktop을 끈 상태로 등록하고, 실제로 답이 나오는지는 아직 확인 전.
 - 완료 조건: Claude Desktop에서 "Quack에서 ○○ 찾아줘"라고 하면 출처가 달린 답이 나온다.
 
 ### (조건부) pgvector 의미 검색

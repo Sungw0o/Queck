@@ -17,6 +17,7 @@ quack.bat                 띄우기와 운영 명령 (아래 "실행" 참고)
 docs/plan.md              개발 계획. 남은 일의 기준
 docs/design.md            디자인 가이드 (토큰, 컴포넌트, 마스코트)
 scripts/smoke.sh          실행 중인 앱에 REST + MCP 스모크 테스트
+scripts/mcp-bridge.mjs    Claude Desktop용 stdio ↔ /mcp 중계 (Node 기본 기능만 씀)
 .claude/                  가드 훅(settings.json, hooks/guard.sh), 브라우저 미리보기(launch.json)
 .githooks/                커밋 메시지 형식, 비밀정보·백업·포트 노출 검사
 .github/workflows/ci.yml  push마다 compose로 띄우고 스모크 테스트
@@ -74,7 +75,11 @@ src/main/resources/
 - 도구는 `ItemTools`의 `@Tool` 메서드다. **도구 설명(description)은 Claude가 읽는 프롬프트**이므로 동작을 바꾸면 설명도 같이 고칠 것.
 - **MCP 응답 JSON은 camelCase**(`parentId`)다. REST는 snake_case다. Spring AI가 자체 매퍼를 쓰기 때문이고, 의도된 차이다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
-- Claude Desktop에 연결하려면 `npx mcp-remote http://localhost:8765/mcp`를 stdio 서버로 등록해야 한다(아직 안 함).
+- **Claude Desktop**은 로컬 서버를 stdio로만 붙이므로 `scripts/mcp-bridge.mjs`가 중계한다. 등록 위치는 `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude_desktop_config.json`의 `mcpServers.quack`이다(이 PC는 MSIX 설치라 `%APPDATA%\Claude`가 아니다). 값은 `node.exe` 절대경로와 스크립트 절대경로다. 등록은 `quack desktop`(`scripts/register-desktop.mjs`)으로 한다.
+  - **Desktop이 켜져 있을 때 이 파일을 고치면 사라진다.** Desktop이 환경설정을 같은 파일에 쓰면서, 시작할 때 읽어 둔 내용으로 덮어쓴다. 그래서 `quack desktop`은 Desktop이 완전히 꺼질 때까지 기다렸다가 `.bak`을 만들고 `mcpServers.quack`만 병합한다.
+  - Claude Code 세션 안에서 띄운 프로세스는 Desktop을 끌 때 같이 죽는다. 세션에서 등록을 돕는다면, 사용자가 직접 연 터미널에서 실행하게 하거나 작업 스케줄러로 띄운다.
+  - Quack이 재시작되면 서버가 세션을 잊고 404를 준다. 중계 스크립트가 initialize를 다시 보내고 그 요청을 재시도하므로 Desktop은 재시작하지 않아도 된다.
+  - `mcp-remote`(npm)를 쓰지 않은 이유: 새 의존성을 피했고, 패키지 소유자가 바뀐 상태라 매 실행마다 받아 쓰기 꺼림칙했다. 중계만 필요하면 이 스크립트로 충분하다.
 
 ## 검색 (RAG의 "찾기")
 - 공백으로 나눈 단어를 `ILIKE '%단어%'`로 찾는다. 점수는 제목 일치 ×2 + 본문 일치다. `%`, `_`, `\`는 이스케이프한다.

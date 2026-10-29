@@ -71,4 +71,15 @@ for t in search get create update; do grep -q "\"name\":\"$t\"" <<<"$tools" || f
 [ "$(grep -o '"inputSchema"' <<<"$tools" | wc -l)" = 4 ] || fail "MCP should expose exactly 4 tools: $tools"
 ok "MCP tools: search get create update"
 
+# Claude Desktop reaches the same tools through the stdio bridge
+if command -v node > /dev/null; then
+  printf '%s\n' \
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
+    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' > "$TMP/bridge.jsonl"
+  bridged=$(node "$(dirname "$0")/mcp-bridge.mjs" "$BASE/mcp" < "$TMP/bridge.jsonl")
+  [ "$(grep -o '"inputSchema"' <<<"$bridged" | wc -l)" = 4 ] || fail "stdio bridge tools/list: $bridged"
+  ok "stdio bridge for Claude Desktop"
+fi
+
 echo "smoke passed"
