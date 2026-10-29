@@ -21,6 +21,10 @@
 - **이슈 문서 2개**: `사람용 요약`에는 목적·완료 조건을 짧게, `에이전트 문서`에는 결정·진행·검증·다음 작업과 출처를 적는다. 각각 작성·미리보기할 수 있고 함께 저장한다. 기존 이슈 설명은 사람용 요약에 그대로 남는다.
 - **이슈 초안 보호**: 저장 성공 후 창이 닫히며, 실패하면 입력한 두 문서를 유지해 재시도할 수 있다. 변경 후 취소·Esc·새로고침·뒤로 가기는 확인을 거친다. 저장 중에는 편집과 중복 저장을 잠시 막는다.
 - **문서**: 마크다운 위키. 하위 페이지로 계층을 만들 수 있다.
+- **지식 위키**: 원본 자료와 정리된 지식을 구분한다. 원본 등록·중복 감지, 출처/역방향 연결, 색인·발행 기록·재검토 표시·구조 점검을 제공한다. 연결된 에이전트가 MCP로 원문을 읽고 위키를 발행한다.
+- **안전한 수정**: 읽은 버전이 다르면 저장을 막고 초안과 최신 내용을 비교한다. 변경 이력에서 과거 내용을 새 버전으로 복원한다. 이력은 기능 설치 시점부터 쌓이며 삭제한 문서는 복구하지 못한다.
+- **입출력**: .md/.txt를 원본 또는 메모로 가져오고 개별 Markdown·전체 Markdown ZIP으로 내보낸다. 내보내기는 DB 백업을 대체하지 않는다.
+- **완료 이슈 지식화**: 완료된 이슈 창의 **위키로 남기기**로 두 문서를 원문 그대로 보존한다. 자동 요약은 하지 않는다.
 - **검색**: `/`를 누르면 이슈와 문서를 한 번에 찾는다.
 - **Claude 연동**: "Quack에서 토큰 재발급 정리한 거 찾아줘"라고 하면 Claude가 찾아 읽고 출처를 달아 답한다. 이슈나 문서를 만들고 고치는 것도 시킬 수 있다. 삭제는 일부러 막아 두었다.
 - 단축키: `/` 검색, `n` 새로 만들기, `Ctrl+S` 문서 저장, `Esc` 편집 취소
@@ -40,6 +44,8 @@ Claude/Codex에 "Quack에서 ○○ 찾아서 에이전트 문서까지 읽고 �
 ```powershell
 .\quack backup
 Get-Content -Raw scripts/migrate-issue-agent.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres postgres
+Get-Content -Raw scripts/migrate-knowledge.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres postgres
+Get-Content -Raw src/main/resources/schema.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres postgres
 docker compose up -d --build app
 ```
 
@@ -79,7 +85,7 @@ Claude Code, Codex, Claude Desktop 세 군데서 쓸 수 있다. 작업 규칙�
 이 폴더에서 Claude Code를 열면 `.mcp.json`으로 자동 연결된다. 처음 한 번만 `quack` 서버 사용을 승인하면 된다.
 
 ### Codex
-이 폴더에서 Codex를 열면 `.codex/config.toml`로 연결된다. 처음 열 때 묻는 **프로젝트 신뢰**와 **훅 신뢰**를 허용해야 MCP와 가드가 켜진다. `search`와 `get`은 묻지 않고 바로 실행하고, `create`와 `update`는 매번 묻는다.
+이 폴더에서 Codex를 열면 `.codex/config.toml`로 연결된다. 처음 열 때 묻는 **프로젝트 신뢰**와 **훅 신뢰**를 허용해야 MCP와 가드가 켜진다. `search`, `get`, `wiki_context`, `history`는 읽기 전용이며 묻지 않고 실행한다. 생성·수정·발행·복원 도구는 기존 승인 정책을 유지한다.
 
 ### Claude Desktop
 Desktop은 로컬 서버를 stdio로만 붙이기 때문에 `scripts/mcp-bridge.mjs`가 중간에서 이어 준다.
@@ -125,6 +131,7 @@ AGENTS.md                 작업 지시서 (에이전트와 사람 공용)
   ```
 - 커밋 제목은 `<gitmoji> <type>: <요약>` 형식이다. 예: `✨ feat: 문서의 QK 번호를 링크로`
 - push하면 GitHub Actions가 compose로 앱을 띄우고 `scripts/smoke.sh`를 돌린다.
+- 스모크는 REST/MCP 10개 도구·충돌·이력·위키 발행과 고정된 검색 평가 10문항을 검사한다. `node scripts/rag-eval.mjs`로 검색 평가만 반복할 수 있다. 이는 검색 근거 평가이며 LLM 답변의 사실성을 측정하지 않는다.
 
 ## 참고
 마스코트는 칸쵸메(금색의 갓슈)를 따라 그린 개인용 팬아트다. 공개 배포나 홍보에 쓰지 않는다.

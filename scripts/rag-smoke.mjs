@@ -5,6 +5,7 @@ const base = process.argv[2] || 'http://localhost:8765';
 const ids = [];
 const token = `인수인계검증${Date.now()}`;
 async function rest(path, method = 'GET', body) {
+  if (method === 'PATCH') body = {expected_revision:(await rest(path)).revision, ...body};
   const r = await fetch(base + '/api/' + path, {
     method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -73,10 +74,10 @@ try {
   assert.equal(found[0].id, created.id);
   assert.equal(found[0].source, 'agent_body');
   assert.equal(found[0].url, `#issue/${created.id}/agent`);
-  const updated = await call('update', { id: created.id, agentBody: '## 검증 결과\n완료' });
+  const updated = await call('update', { id: created.id, expectedRevision:full.revision, agentBody: '## 검증 결과\n완료' });
   assert.equal(updated.body, 'MCP 요약');
   assert.equal(updated.agentBody, '## 검증 결과\n완료');
-  const cleared = await call('update', { id: created.id, agentBody: '' });
+  const cleared = await call('update', { id: created.id, expectedRevision:updated.revision, agentBody: '' });
   assert.equal(cleared.agentBody, '');
   assert.equal(cleared.body, 'MCP 요약');
   console.log('ok   MCP create -> search -> get -> update, camelCase documents, source citation');

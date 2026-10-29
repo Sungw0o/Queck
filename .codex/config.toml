@@ -7,9 +7,15 @@ hooks = true
 [mcp_servers.quack]
 url = "http://localhost:8765/mcp"
 
-# Read-only tools run without asking; create/update still ask. Same split as .claude/settings.json permissions.
+# Read-only tools run without asking; all writes retain the default approval policy.
 [mcp_servers.quack.tools.search]
 approval_mode = "approve"
 
 [mcp_servers.quack.tools.get]
+approval_mode = "approve"
+
+[mcp_servers.quack.tools.wiki_context]
+approval_mode = "approve"
+
+[mcp_servers.quack.tools.history]
 approval_mode = "approve"

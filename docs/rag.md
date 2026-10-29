@@ -35,8 +35,8 @@
 
 ## 검색해서 답하는 순서
 
-1. MCP `search(query, kind?, limit?)`로 검색한다. 한국어는 조사 없는 짧은 어간을 쓰고 결과가 부족하면 동의어로 다시 찾는다. 최대 20개이며 빈 질의는 최근 항목을 보여 준다.
-2. 결과의 `source`는 `title`, `body`, `agent_body` 중 발췌 대상으로 선택된 필드다. 두 문서에 모두 맞으면 사람용 본문을 먼저 보여 준다. 발췌는 최대 300자로 잘리므로 답의 근거로 쓰기 전에 반드시 `get(id)`을 호출한다.
+1. MCP `search(query, kind?, limit?, pageType?)`로 검색한다. 한국어는 조사 없는 짧은 어간을 쓰고 결과가 부족하면 동의어로 다시 찾는다. 최대 20개이며 빈 질의는 최근 항목을 보여 준다. pageType은 note/source/wiki를 지원한다.
+2. 결과의 `source`는 `title`, `body`, `agent_body` 중 발췌 대상으로 선택된 필드다. 두 문서에 모두 맞으면 사람용 본문을 먼저 보여 준다. 검색어 주변 약 300자만 발췌하므로 답의 근거로 쓰기 전에 반드시 `get(id)`을 호출한다.
 3. `get`으로 사람용 요약·에이전트 문서 전체를 읽고 확인된 사실을 답한다. 충돌하거나 빠진 정보가 있으면 그대로 밝힌다.
 4. 이슈 키·제목과 문서 종류를 밝히고 `http://localhost:8765/`에 검색 결과 `url`을 붙여 출처를 단다. 에이전트 문서는 `http://localhost:8765/#issue/12/agent`, 사람용은 `http://localhost:8765/#issue/12`, 위키는 `http://localhost:8765/#docs/12`다.
 
@@ -46,7 +46,18 @@
 
 1. 사용자에게 허용받은 작업을 수행한다.
 2. `get(id)`으로 최신 내용을 다시 읽는다.
-3. 기존 결정과 출처를 보존하면서 `update(id, agentBody: ...)`로 에이전트 문서를 갱신한다. 사람용 결과 요약도 바꿀 필요가 있을 때만 `body`를 보낸다. 생략한 필드는 유지하며 빈 문자열은 해당 문서를 비운다. REST는 `agent_body: null`도 빈 문서로 처리한다.
+3. 기존 결정과 출처를 보존하면서 `update(id, expectedRevision, agentBody: ...)`로 에이전트 문서를 갱신한다. 사람용 결과 요약도 바꿀 필요가 있을 때만 `body`를 보낸다. 생략한 필드는 유지하며 빈 문자열은 해당 문서를 비운다. REST는 `agent_body: null`도 빈 문서로 처리한다.
 
-<!-- ponytail: whole-document last-write-wins updates, serialize edits to the same document; add revision checks if concurrent writes become common. -->
-동일 문서의 동시 편집은 마지막 저장이 이긴다. 여러 에이전트가 같은 문서를 동시에 수정하지 않도록 작업을 순서대로 진행한다. 자동 병합·잠금·에이전트 메시지 전송은 없다.
+동일 문서의 동시 편집은 `revision`으로 감지한다. REST PATCH에는 `expected_revision`, MCP update에는 `expectedRevision`이 필수다. 누락은 428, 다른 버전은 409다. 최신 원문과 초안을 합쳐 저장하며 버전만 바꿔 무조건 재시도하지 않는다. 자동 병합·에이전트 메시지 전송은 없다.
+
+## 원본 → 지식 위키
+
+`ingest_source`로 원본을 보존한 뒤 `get`으로 원문과 버전을 읽는다. `search`와 `wiki_context(index/links)`로 관련 문서를 찾고, 기존 주제를 우선 갱신한다. `publish_wiki`에 모든 `{id, revision}` 출처·현재 위키 버전·관련 문서·변경 요약을 보낸다. 출처가 바뀌었으면 발행 전체가 취소된다. 성공한 발행만 본문·출처 연결·색인·로그에 반영된다.
+
+원본은 MCP update로 덮어쓸 수 없다. 같은 정규화 본문은 재사용하고, 같은 URL의 다른 본문은 충돌로 알린다. `needsReview`인 위키는 원본을 재확인한다. 구조 점검은 출처 누락/변경·깨진 링크·고아 위키만 감지하며 내용의 모순은 외부 에이전트가 원문을 비교한다. 전체 절차와 예시는 앱의 [에이전트 가이드](../src/main/resources/static/agent-guide.md)에 있다.
+
+## 반복 가능한 검색 평가
+
+`node scripts/rag-eval.mjs`는 고정된 10개 한국어 질문/근거 유형에 실행별 고유 토큰을 붙여 임시 자료를 만든다. 긴 본문·에이전트 문서·리터럴 기호·유니코드의 조회 여부, 출처 필드/링크, 검색어 근처 발췌와 제목을 검증하고 자료를 정리한다. `offset`은 선택된 본문 기준 UTF-16 위치다. 기존 앞 300자 발췌와 같은 근거 세트로 비교한다.
+
+이 검사는 검색 계층만 측정한다. 실제 Claude/Codex 답변의 정확성·모순 해석·근거 없는 주장 여부는 평가하지 않는다. 실사용 실패 질문을 이 세트에 추가한 뒤 임베딩 도입을 판단한다.

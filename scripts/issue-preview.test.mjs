@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../src/main/resources/static/index.html', import.meta.url), 'utf8');
-const elements = Object.fromEntries(['dlg', 'dlgKey', 'del', 'iPreview', 'iPreviewToggle', 'iHuman', 'iAgent', 'iDocHelp'].map(id => [id, {
+const elements = Object.fromEntries(['dlg', 'dlgKey', 'del', 'iPreview', 'iPreviewToggle', 'iHuman', 'iAgent', 'iDocHelp', 'iHistory', 'iKnowledge', 'workDlg'].map(id => [id, {
   hidden: false, innerHTML: '', textContent: '', attributes: {},
   setAttribute(key, value) { this.attributes[key] = value },
   replaceChildren() { this.innerHTML = '' },
@@ -20,6 +20,7 @@ const context = vm.createContext({
   console: { error: error => errors.push(error) },
   marked: { parse: text => `parsed(${text})` },
   DOMPurify: { sanitize: text => `sanitized(${text})` },
+  workDirty: () => false, workSaving:false, pageSaving:false, discardWork: () => true,
 });
 const start = html.indexOf('function showIssueDoc(name) {');
 const end = html.indexOf("$('dlg').querySelector('form').onsubmit", start);
@@ -76,10 +77,11 @@ context.renderBoard = () => {};
 const submitStart = html.indexOf("$('dlg').querySelector('form').onsubmit");
 const submitEnd = html.indexOf("$('del').onclick", submitStart);
 vm.runInContext(html.slice(submitStart, submitEnd), context);
-context.edit({ id: 7, title: '이슈', body: '요약', agent_body: '에이전트 기록', status: 'todo', prio: 'mid' });
+context.edit({ id: 7, revision:3, title: '이슈', body: '요약', agent_body: '에이전트 기록', status: 'todo', prio: 'mid' });
 fields.body.value = '바뀐 요약';
 await form.onsubmit(event('save'));
 assert.equal(calls.at(-1).body.body, '바뀐 요약');
+assert.equal(calls.at(-1).body.expected_revision, 3);
 assert.equal('agent_body' in calls.at(-1).body, false);
 context.edit({ id: 7, title: '이슈', body: '요약', agent_body: '에이전트 기록', status: 'todo', prio: 'mid' });
 fields.agent_body.value = '다음 작업';

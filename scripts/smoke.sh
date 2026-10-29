@@ -46,7 +46,7 @@ iid=$(id_of "$issue"); IDS+=("$iid")
 grep -q '"status":"todo"' <<<"$issue" && grep -q '"prio":"mid"' <<<"$issue" || fail "issue defaults: $issue"
 ok "issue defaults todo/mid"
 
-patched=$(send PATCH "/api/items/$iid" '{"status":"doing"}')
+patched=$(send PATCH "/api/items/$iid" '{"status":"doing","expected_revision":1}')
 grep -q '"status":"doing"' <<<"$patched" && grep -q '"title":"\[SMOKE\] issue"' <<<"$patched" || fail "patch: $patched"
 ok "patch changes only sent keys"
 
@@ -74,19 +74,21 @@ SID=$(grep -i '^mcp-session-id:' "$TMP/headers" | cut -d' ' -f2 | tr -d '\r')
 [ -n "$SID" ] || fail "MCP initialize returned no session id"
 mcp '{"jsonrpc":"2.0","method":"notifications/initialized"}' > /dev/null
 tools=$(mcp '{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
-for t in search get create update; do grep -q "\"name\":\"$t\"" <<<"$tools" || fail "MCP tool $t missing: $tools"; done
-[ "$(grep -o '"inputSchema"' <<<"$tools" | wc -l)" = 4 ] || fail "MCP should expose exactly 4 tools: $tools"
-ok "MCP tools: search get create update"
+for t in search get create update ingest_source publish_wiki wiki_context history restore promote_issue; do grep -q "\"name\":\"$t\"" <<<"$tools" || fail "MCP tool $t missing: $tools"; done
+[ "$(grep -o '"inputSchema"' <<<"$tools" | wc -l)" = 10 ] || fail "MCP should expose exactly 10 tools: $tools"
+ok "MCP 10 tools"
 
 # Claude Desktop reaches the same tools through the stdio bridge
 if command -v node > /dev/null; then
   node "$(dirname "$0")/rag-smoke.mjs" "$BASE"
+  node "$(dirname "$0")/knowledge-smoke.mjs" "$BASE"
+  node "$(dirname "$0")/rag-eval.mjs" "$BASE"
   printf '%s\n' \
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
     '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
     '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' > "$TMP/bridge.jsonl"
   bridged=$(node "$(dirname "$0")/mcp-bridge.mjs" "$BASE/mcp" < "$TMP/bridge.jsonl")
-  [ "$(grep -o '"inputSchema"' <<<"$bridged" | wc -l)" = 4 ] || fail "stdio bridge tools/list: $bridged"
+  [ "$(grep -o '"inputSchema"' <<<"$bridged" | wc -l)" = 10 ] || fail "stdio bridge tools/list: $bridged"
   ok "stdio bridge for Claude Desktop"
 fi
 

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../src/main/resources/static/index.html', import.meta.url), 'utf8');
-const elements = Object.fromEntries(['home', 'board', 'docs', 'guide', 'guideHuman', 'guideAgent', 'guideDownload', 'guideBody'].map(id => [id, {
+const elements = Object.fromEntries(['home', 'board', 'docs', 'guide', 'knowledge', 'guideHuman', 'guideAgent', 'guideDownload', 'guideBody'].map(id => [id, {
   hidden: true, textContent: '', innerHTML: '', attributes: {},
   setAttribute(key, value) { this.attributes[key] = value },
 }]));
@@ -14,6 +14,7 @@ const context = vm.createContext({
   location: { hash: '' }, history: { replaceState: (_state, _title, hash) => { context.location.hash = hash } },
   window: { scrollTo: () => { calls.push('top') } },
   renderTree: async () => {}, renderBoard: () => { calls.push('board') },
+  renderKnowledge: () => { calls.push('knowledge') },
   renderDoc: (id, edit) => { calls.push({ page: id, edit }) },
   api: async () => ({ id: 12 }), edit: item => { calls.push({ issue: item.id }) },
   showIssueDoc: name => { calls.push(name) },
@@ -47,6 +48,10 @@ assert.equal(context.location.hash, '#board');
 assert.equal(elements.board.hidden, false);
 assert.ok(calls.some(c => c.issue === 12));
 assert.ok(calls.includes('agent_body'));
+context.location.hash = '#knowledge';
+await context.route();
+assert.equal(elements.knowledge.hidden, false);
+assert.ok(calls.includes('knowledge'));
 
 context.location.hash = '#guide/agent';
 await context.route();

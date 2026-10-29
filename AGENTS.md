@@ -29,7 +29,8 @@ src/main/java/quack/
   QuackApplication.java   ItemTools를 MCP ToolCallbackProvider로 등록
   ItemRepository.java     JdbcClient + SQL 전부 (JPA 안 씀). Item / Hit record
   ItemController.java     REST /api/**
-  ItemTools.java          MCP 도구 4개: search, get, create, update (@Tool)
+  ItemTools.java          MCP 도구 10개: 검색/읽기/쓰기 + 원본·위키 발행·문맥·이력·복원·지식화
+  MarkdownController.java 텍스트/마크다운 가져오기, 개별 Markdown·전체 ZIP 내보내기
 src/main/resources/
   application.yml         DB, Jackson SNAKE_CASE, MCP(STREAMABLE), 정적 파일 no-cache
   schema.sql              items 테이블 (CREATE IF NOT EXISTS, 기동 때마다 실행)
@@ -52,7 +53,7 @@ src/main/resources/
 - 복원(빈 DB에만): `docker compose exec -T db psql -U postgres postgres < backups/파일.sql`. 데이터가 있는 DB에 복원하면 충돌하므로 먼저 사용자와 상의한다.
 
 ## 데이터 모델
-테이블은 `items` 하나다. 이슈와 문서를 한 테이블에 두는 이유는 검색을 한 번에 하기 위해서다.
+콘텐츠는 `items` 한 테이블에 모아 한 번에 검색한다. 변경 이력·출처 연결·발행 로그에는 보조 테이블을 쓴다(아래 지식 위키 확장 참고).
 - `kind`: `issue` | `page`
 - `status`: `todo` | `doing` | `done` (이슈 전용, 기본 `todo`)
 - `prio`: `high` | `mid` | `low` (이슈 전용, 기본 `mid`)
@@ -69,9 +70,9 @@ src/main/resources/
 | GET | `/api/items?kind=` | 목록 |
 | GET | `/api/items/{id}` | 단건 (없으면 404) |
 | POST | `/api/items` | 생성 `{kind, title, body?, status?, prio?, parent_id?}` |
-| PATCH | `/api/items/{id}` | 부분 수정. 보낸 키만 바뀌고, 명시한 `null`은 그 값을 지운다 |
+| PATCH | `/api/items/{id}` | `expected_revision` 필수. 보낸 키만 수정. 본문 null은 빈 문서, parent_id/source_url null은 제거. 제목·상태·우선순위는 유효 값 필수 |
 | DELETE | `/api/items/{id}` | 삭제 (본문 없는 200) |
-| GET | `/api/search?q=&kind=` | 검색 (최대 20개) |
+| GET | `/api/search?q=&kind=&page_type=` | 검색 (최대 20개) |
 
 - PATCH는 `FIELDS` 화이트리스트로 컬럼명을 거른 뒤에 SQL을 만든다. 이 화이트리스트를 지우면 SQL 인젝션이 생긴다.
 - 이슈 생성·수정은 `agent_body`도 받는다. 생략하면 기존 값을 유지하고, PATCH의 `agent_body: null` 또는 빈 문자열은 에이전트 문서를 비운다. 기존 DB 업그레이드는 백업 후 `scripts/migrate-issue-agent.sql`을 psql로 실행한다(README 참고).
@@ -80,7 +81,7 @@ src/main/resources/
 - Spring AI `spring-ai-starter-mcp-server-webmvc`, streamable HTTP 방식, 엔드포인트는 `/mcp`.
 - 도구는 `ItemTools`의 `@Tool` 메서드다. **도구 설명(description)은 Claude가 읽는 프롬프트**이므로 동작을 바꾸면 설명도 같이 고칠 것.
 - **MCP 응답 JSON은 camelCase**(`parentId`)다. REST는 snake_case다. Spring AI가 자체 매퍼를 쓰기 때문이고, 의도된 차이다.
-- 이슈 문서는 `body`(사람용 요약)와 `agentBody`(에이전트 인수인계)로 나뉜다. `get`으로 최신 문서를 읽고 필요한 필드만 `update`한다. 같은 문서를 동시에 수정하면 마지막 저장이 이긴다.
+- 이슈 문서는 `body`(사람용 요약)와 `agentBody`(에이전트 인수인계)로 나뉜다. `get`으로 최신 문서를 읽고 `expectedRevision`과 필요한 필드만 `update`한다. 다른 버전은 충돌로 거부한다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
 - 연결은 세 군데다. **Claude Code**: `.mcp.json`. **Codex**: `.codex/config.toml`의 `[mcp_servers.quack]`(streamable HTTP를 직접 지원해서 중계가 필요 없다). **Claude Desktop**: 아래. 주소를 바꾸면 셋 다 고친다.
 - 도구 승인: Codex는 `search`, `get`만 묻지 않고 실행하고 `create`, `update`는 묻는다(`[mcp_servers.quack.tools.<이름>] approval_mode = "approve"`). `codex exec`처럼 비대화형으로 돌리면 승인이 필요한 도구는 실패한다.
@@ -110,7 +111,7 @@ src/main/resources/
 - **마스코트**: `mascot(mood, size)`와 `hey(mood, 대사)`. 표정과 대사 톤은 `docs/design.md`에 있다. 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**라서 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
 
 ## 검증 방법 (작업 후 반드시)
-1. `docker compose up -d --build app` → `docker logs quack-app`에서 `Started QuackApplication`와 `Registered tools: 4`를 확인한다.
+1. `docker compose up -d --build app` → `docker logs quack-app`에서 `Started QuackApplication`와 `Registered tools: 10`를 확인한다.
 2. `bash scripts/smoke.sh` (또는 `quack smoke`): REST 생성·수정·한글 검색·404·cascade 삭제와 MCP `tools/list`를 확인하고, 만든 `[SMOKE]` 데이터는 실패해도 지운다. API나 MCP 동작을 바꾸면 이 스크립트도 같이 고친다.
    - **Windows Git Bash에서 curl 인자에 한글을 넣으면 깨진다.** 본문은 파일로 만들어 `--data-binary @file`로 보낸다(스크립트가 이미 그렇게 한다).
    - MCP를 손으로 부를 때: `initialize` → `Mcp-Session-Id` 헤더 → `notifications/initialized` → `tools/list`/`tools/call`. 헤더 `Accept: application/json, text/event-stream`이 필요하다.
@@ -164,3 +165,17 @@ src/main/resources/
 
 ## 남은 작업
 `docs/plan.md`에 있다. 여기에 따로 적지 않는다.
+
+## 지식 위키 확장 (현재 동작)
+- `items`는 콘텐츠 테이블 하나를 유지한다. `page_type`: note(기존 메모)/source(원본)/wiki(정리된 지식), `source_url`, 중복 검사용 `content_hash`, 동시 수정용 `revision`이 추가됐다. 이력은 `item_revisions`, 연결은 `item_links`, 성공한 발행 기록은 `wiki_events`다. 기존 내용은 수정하지 않고 버전 1의 초기 이력을 만든다.
+- 기존 DB 업그레이드: 백업 성공 → `scripts/migrate-knowledge.sql` → `schema.sql` → 앱 빌드/시작. 과거 agent_body가 없는 DB는 먼저 `migrate-issue-agent.sql`을 적용한다. README의 PowerShell 명령을 따른다.
+- REST PATCH에는 양의 정수 `expected_revision`이 필수다. 없으면 428, 읽은 버전과 다르면 409다. MCP update는 `expectedRevision`을 사용한다. 충돌 시 새 버전만 대입해 무조건 재시도하지 않는다.
+- 이력은 기능 설치 이후부터 쌓인다. 복원은 과거 내용을 새 버전으로 저장한다. 과거 연결 관계·상위 페이지·삭제 문서 복구는 지원하지 않는다. 삭제하면 해당 이력·로그도 삭제된다. 인용 중인 원본/그 부모의 삭제는 409다.
+- REST: `POST /api/sources {title,body,source_url?}`, `POST /api/wiki/publish {id?,expected_revision?,title,body,sources:[{id,revision}],related_ids?,summary}`, `GET /api/wiki/index`, `/api/wiki/log`, `/api/wiki/check`.
+- REST: `GET /api/items/{id}/history`, `POST /api/items/{id}/restore {revision,expected_revision}`, `GET /api/items/{id}/links`(outgoing/backlinks), `POST /api/items/{id}/knowledge {expected_revision}`(완료 이슈 원문 스냅샷).
+- REST: `POST /api/markdown/import {markdown,title?,page_type?,source_url?}`(source 또는 일반 note), `GET /api/items/{id}/export`, `GET /api/export`(Markdown ZIP). Markdown 내보내기는 DB 백업이나 완전한 왕복 형식이 아니다. 파일은 UTF-8 .md/.txt만 화면에서 읽는다.
+- MCP 추가 도구: `ingest_source`, `publish_wiki`, `wiki_context`(index/sources/links/check/log), `history`, `restore`, `promote_issue`. 읽기 전용인 wiki_context/history만 기존 search/get과 같은 설정을 쓴다. 쓰기 승인을 완화하지 않는다. MCP update는 이슈/일반 메모만 수정하며 원본은 화면에서, 위키는 publish_wiki로 변경한다.
+- 원본 중복은 NFC·CRLF 정규화·앞뒤 공백 제거 후 SHA-256으로 감지한다. 동일 내용이면 기존 자료를 반환한다. 같은 URL의 다른 본문은 충돌이며 자동 덮어쓰지 않는다. URL은 메타데이터이며 서버에서 접속하지 않는다.
+- 발행은 원본/위키를 잠그고 읽은 버전을 확인한 뒤 본문·출처/관련 링크·로그를 한 트랜잭션으로 저장한다. 같은 위키 제목은 대소문자를 무시하고 중복을 막는다. 일반 편집·복원·출처 버전 변경은 `needs_review`로 표시된다. 버전 일치는 사실성 보증이 아니다.
+- 라우트 `#knowledge`에 색인·원본·점검·로그가 있다. 구조 점검은 출처 누락/변경, 깨진 내부 링크, 역방향 연결 없는 위키를 찾는다. 의미상의 모순은 외부 에이전트가 원문을 읽고 본문/발행 요약에 기록한다. 앱이 LLM을 호출하지 않는다.
+- 검색 REST는 `page_type` 필터도 지원한다. 발췌는 일치 부분 근처 약 300자, `offset`(선택된 본문 UTF-16 위치), `heading`을 반환한다. 평가: `node scripts/rag-eval.mjs`; 통합검사: `node scripts/knowledge-smoke.mjs`. 둘 다 smoke.sh/CI에 포함된다. LLM 답변 사실성 평가는 별도다.
