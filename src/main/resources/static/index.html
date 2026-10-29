@@ -54,7 +54,7 @@ button.primary:hover { filter: brightness(1.08) }
 .brand .mascot { margin: -4px 0 }
 .hey { text-align: center; color: var(--muted); font-size: 13px; padding: 18px 8px }
 .hey p { margin: 6px 0 0 }
-.mascot { display: inline-block; vertical-align: middle; overflow: visible }
+.mascot { display: inline-block; vertical-align: middle; object-fit: contain }
 .hey .mascot { animation: bob 2.4s ease-in-out infinite }
 @keyframes bob { 50% { transform: translateY(-4px) rotate(-2deg) } }
 @media (prefers-reduced-motion: reduce) { .hey .mascot { animation: none } }
@@ -195,34 +195,9 @@ dialog textarea:focus { border-color: var(--accent) }
 <script src="https://cdn.jsdelivr.net/npm/marked@18.1.1/lib/marked.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"></script>
 <script>
-// Mascot: round duck-lipped little guy with a tuft. Moods: idle, proud, shock, cry.
+// Reference-based Kanchome fan art, for this private local app only.
 function mascot(mood = 'idle', size = 96) {
-  const open = mood === 'shock' || mood === 'cry';
-  const eyes = {
-    idle: '<circle cx="48" cy="50" r="4.5"/><circle cx="72" cy="50" r="4.5"/>',
-    proud: '<path d="M42 52q6-7 12 0M66 52q6-7 12 0" fill="none" stroke-width="3.5" stroke-linecap="round"/>',
-    shock: '<circle cx="48" cy="47" r="8.5" fill="#fff" stroke-width="3"/><circle cx="72" cy="47" r="8.5" fill="#fff" stroke-width="3"/>'
-         + '<circle cx="48" cy="48" r="2.6"/><circle cx="72" cy="48" r="2.6"/>',
-    cry: '<path d="M41 47l12 5M79 47l-12 5" fill="none" stroke-width="3.5" stroke-linecap="round"/>'
-       + '<path d="M45 56q-4 12 0 22M75 56q4 12 0 22" fill="none" stroke="#6ec6ff" stroke-width="5" stroke-linecap="round"/>',
-  }[mood];
-  const lips = open
-    ? '<ellipse cx="60" cy="63" rx="21" ry="7" fill="#ff8a3d"/><ellipse cx="60" cy="71" rx="11" ry="6" fill="#5a1e1e"/>'
-      + '<ellipse cx="60" cy="79" rx="16" ry="6" fill="#ff7a2d"/>'
-    : `<g transform="rotate(${mood === 'proud' ? -9 : 0} 60 68)"><ellipse cx="60" cy="65" rx="22" ry="8" fill="#ff8a3d"/>`
-      + '<ellipse cx="60" cy="74" rx="16" ry="7" fill="#ff7a2d"/></g>';
-  const sparkle = mood === 'proud'
-    ? '<path d="M98 14l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#ffd23f" stroke-width="2"/>' : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="${size}" height="${size}" class="mascot"
-    stroke="#2b2320" stroke-width="3" stroke-linejoin="round" fill="#2b2320">
-    <ellipse cx="48" cy="114" rx="9" ry="4" fill="#ff8a3d"/><ellipse cx="72" cy="114" rx="9" ry="4" fill="#ff8a3d"/>
-    <ellipse cx="60" cy="98" rx="25" ry="16" fill="#3b4aa8"/>
-    <ellipse cx="34" cy="96" rx="6" ry="9" fill="#fff6e0" transform="rotate(25 34 96)"/>
-    <ellipse cx="86" cy="96" rx="6" ry="9" fill="#fff6e0" transform="rotate(-25 86 96)"/>
-    <path d="M54 24Q48 6 60 3Q55 13 62 21Q66 6 79 8Q67 13 66 24Z" fill="#ffd23f"/>
-    <circle cx="60" cy="56" r="34" fill="#fff6e0"/>
-    <ellipse cx="36" cy="62" rx="6" ry="3.5" fill="#ffb3b3" stroke="none"/><ellipse cx="84" cy="62" rx="6" ry="3.5" fill="#ffb3b3" stroke="none"/>
-    ${eyes}${lips}${sparkle}</svg>`;
+  return `<img src="/mascot/${mood}.png" width="${size}" height="${size}" class="mascot" alt="" aria-hidden="true">`;
 }
 
 // mood + line shown where a list is empty
@@ -244,8 +219,7 @@ F.status.innerHTML = options(COLS);
 marked.use({ breaks: true });
 $('logo').innerHTML = mascot('idle', 26);
 $('empty').innerHTML = hey('idle', '문서를 골라라!<br>아니면 <b>+</b> 로 새로 만들든가!', 140);
-document.head.insertAdjacentHTML('beforeend',
-  `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(mascot('idle'))}">`);
+document.head.insertAdjacentHTML('beforeend', '<link rel="icon" type="image/png" href="/mascot/idle.png">');
 
 let editing = null;     // issue open in the dialog
 let page = null;        // page open in the docs view
