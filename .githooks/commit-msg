@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Git Hook: Validate commit message format
+# Format: <gitmoji> <type>: <명령형 요약>
+# Types: feat, fix, refactor, test, docs, infra, chore, perf, security
+
+commit_msg_file="$1"
+commit_msg=$(head -n 1 "$commit_msg_file")
+
+# Allow merge commits
+if [[ "$commit_msg" =~ ^Merge ]]; then
+    exit 0
+fi
+
+# AGENTS.md의 gitmoji-type 표와 짝이 맞아야 한다. ♻️·⚡️는 변형 선택자(U+FE0F) 없이 입력되기도 해서 둘 다 받는다.
+expected_emoji() {
+    case "$1" in
+        feat) echo "✨" ;;
+        fix) echo "🐛" ;;
+        refactor) echo "♻️ ♻" ;;
+        test) echo "✅" ;;
+        docs) echo "📝" ;;
+        infra) echo "🚀" ;;
+        chore) echo "🔧" ;;
+        perf) echo "⚡️ ⚡" ;;
+        security) echo "🔒" ;;
+    esac
+}
+
+valid=false
+if [[ "$commit_msg" =~ ^([^ ]+)\ +([a-z]+):\ .+ ]]; then
+    emoji="${BASH_REMATCH[1]}"
+    type="${BASH_REMATCH[2]}"
+    for allowed in $(expected_emoji "$type"); do
+        [[ "$emoji" == "$allowed" ]] && valid=true
+    done
+fi
+
+if ! $valid; then
+    echo "❌ [Commit Hook Error] 커밋 메시지 형식이 올바르지 않습니다."
+    echo ""
+    echo "올바른 형식: <gitmoji> <type>: <명령형 요약> (gitmoji는 type과 짝이 맞아야 합니다)"
+    echo "예시:"
+    echo "  ✨ feat: 주문 생성 API 구현"
+    echo "  🐛 fix: 조회수 갱신 유실 방지"
+    echo "  ♻️ refactor: 결제 후처리 책임 분리"
+    echo "  ✅ test: 토큰 재발급 동시성 검증 추가"
+    echo "  📝 docs: 배포 복구 절차 보완"
+    echo "  🚀 infra: CI 파이프라인 구성"
+    echo "  🔧 chore: 의존성 버전 업데이트"
+    echo "  ⚡️ perf: 도서 검색 쿼리 최적화"
+    echo "  🔒 security: 로그의 토큰 정보 제거"
+    echo ""
+    echo "입력된 메시지: '$commit_msg'"
+    exit 1
+fi
+
+exit 0
