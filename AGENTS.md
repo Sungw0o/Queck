@@ -77,7 +77,8 @@ src/main/resources/
 - **보안 규칙**:
   - 마크다운은 반드시 `DOMPurify.sanitize(marked.parse(...))`로만 렌더링한다. Claude가 MCP로 쓴 글도 여기로 들어온다.
   - 그 밖의 텍스트는 `esc()`로 이스케이프하거나 `textContent`로 넣는다.
-- 스타일은 노션(문서)과 Linear(보드) 느낌이다. 색은 `:root`의 CSS 변수로 관리하고, 다크 모드는 `prefers-color-scheme`로 처리한다. 새 색을 하드코딩하지 말 것.
+- 스타일은 **글래스모피즘**이다. `--wall`(그라데이션 배경) 위에 사이드바, 보드 컬럼, 문서, 다이얼로그가 반투명 패널(`--glass`, `--blur`)로 뜬다. 버튼과 입력창은 pill 모양이다. 색은 `:root`의 CSS 변수로 관리하고, 다크 모드는 `prefers-color-scheme`로 처리한다. 새 색을 하드코딩하지 말 것.
+  - `backdrop-filter`는 바깥 패널에만 건다. 안쪽 요소(카드 등)는 `--glass-hi` 배경만 쓴다. 겹쳐 걸면 안쪽 블러가 부모 안만 흐리게 해서 의미가 없다.
 - 단축키: `/` 검색, `n` 새로 만들기, `Ctrl+S` 문서 저장, `Esc` 편집 취소. 저장 안 한 변경이 있으면 취소나 창 닫기 때 확인한다.
 - 이슈 다이얼로그 저장은 form의 `submit` 이벤트(`e.submitter.value === 'save'`)에서 처리한다. `dialog`의 `close` 이벤트는 내장 브라우저에서 발생하지 않은 적이 있어서 쓰지 않는다.
 - **마스코트**: `mascot(mood, size)`가 인라인 SVG를 만든다. mood는 `idle`, `proud`, `shock`, `cry`다. `hey(mood, 대사)`는 빈 상태에 쓰는 마스코트 + 대사 묶음이다. 대사는 허세 부리고 투덜대는 반말 톤이다(예: "할 일이 없다! 역시 나야!", "꽥?! 없는데…?").
