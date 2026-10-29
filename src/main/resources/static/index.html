@@ -248,6 +248,7 @@ let editing = null;     // issue open in the dialog
 let page = null;        // page open in the docs view
 let pages = [];         // all pages, for the tree and breadcrumbs
 let current = 'board';  // hash of the active view, for sidebar highlight
+let routed = '';        // location.hash of the view on screen, restored when leaving an unsaved edit is cancelled
 let editNext = false;   // open the next routed page straight in edit mode
 
 async function api(path, opts = {}) {
@@ -377,9 +378,10 @@ function showEdit() {
 
 const isEditing = () => !$('docs').hidden && !$('edit').hidden;
 const isDirty = () => isEditing() && ($('pTitle').value !== page.title || $('pBody').value !== page.body);
+const confirmDiscard = () => !isDirty() || confirm('저장하지 않은 변경이 있어요. 버릴까요?');
 
 function cancelEdit() {
-  if (isDirty() && !confirm('저장하지 않은 변경이 있어요. 버릴까요?')) return;
+  if (!confirmDiscard()) return;
   showView();
 }
 
@@ -390,6 +392,8 @@ async function savePage() {
 }
 
 async function newPage(parent_id = null) {
+  if (!confirmDiscard()) return;  // ask before the POST, or a cancel leaves an orphan page
+  if (isEditing()) showView();    // already confirmed: don't ask again on hashchange
   const p = await api('items', { method: 'POST', body: { kind: 'page', title: '제목 없음', parent_id } });
   editNext = true;
   location.hash = `docs/${p.id}`;
@@ -404,6 +408,7 @@ $('newPage').onclick = () => newPage();
 $('newIssue').onclick = () => edit(null);
 $('pDel').onclick = async () => {
   if (!confirm('이 페이지와 하위 페이지를 모두 삭제할까요?')) return;
+  if (isEditing()) showView();  // the edit goes with the page: don't also ask to discard it
   await api('items/' + page.id, { method: 'DELETE' });
   location.hash = 'docs';
 };
@@ -417,6 +422,7 @@ async function route() {
     view = 'board';
     api('items/' + id).then(edit);
   }
+  routed = location.hash || '#board';
   const docs = view === 'docs';
   current = docs && id ? `docs/${id}` : docs ? 'docs' : 'board';
   $('board').hidden = docs;
@@ -437,7 +443,12 @@ document.onkeydown = e => {
 };
 
 onbeforeunload = e => { if (isDirty()) e.preventDefault() };
-onhashchange = route;
+// Sidebar, search and breadcrumb links all change the hash; route() would re-render and drop the edit.
+// replaceState puts the old hash back without firing another hashchange.
+onhashchange = () => {
+  if (!confirmDiscard()) return history.replaceState(null, '', routed);
+  route();
+};
 route();
 </script>
 </body>
