@@ -12,8 +12,14 @@
 docker-compose.yml        postgres:16 + app. 둘 다 127.0.0.1에만 바인딩
 Dockerfile                gradle:jdk21로 빌드 → temurin 21 jre, -Xmx256m
 build.gradle              Spring Boot 4.1.2 + Spring AI BOM 2.0.2 (두 버전은 짝이 맞아야 함)
-start.bat                 compose up --build 후 브라우저 열기
+quack.bat                 띄우기와 운영 명령 (아래 "실행" 참고)
 .mcp.json                 Claude Code용 MCP 연결 (http://localhost:8765/mcp)
+docs/plan.md              개발 계획. 남은 일의 기준
+docs/design.md            디자인 가이드 (토큰, 컴포넌트, 마스코트)
+scripts/smoke.sh          실행 중인 앱에 REST + MCP 스모크 테스트
+.claude/                  가드 훅(settings.json, hooks/guard.sh), 브라우저 미리보기(launch.json)
+.githooks/                커밋 메시지 형식, 비밀정보·백업·포트 노출 검사
+.github/workflows/ci.yml  push마다 compose로 띄우고 스모크 테스트
 src/main/java/quack/
   QuackApplication.java   ItemTools를 MCP ToolCallbackProvider로 등록
   ItemRepository.java     JdbcClient + SQL 전부 (JPA 안 씀). Item / Hit record
@@ -28,13 +34,16 @@ src/main/resources/
 ## 실행
 | 방법 | 명령 | 주소 |
 |---|---|---|
-| 전체 (Docker) | `docker compose up -d --build` 또는 `start.bat` | 앱 http://localhost:8765, MCP http://localhost:8765/mcp |
-| IntelliJ 개발 | `docker compose up -d db` 후 IntelliJ에서 `QuackApplication` 실행 | 앱 http://localhost:8080, DB localhost:15432 |
+| 전체 (Docker) | `quack` (또는 `quack.bat` 더블클릭) | 앱 http://localhost:8765, MCP http://localhost:8765/mcp |
+| IntelliJ 개발 | `quack db` 후 IntelliJ에서 `QuackApplication` 실행 | 앱 http://localhost:8080, DB localhost:15432 |
+
+`quack.bat` 명령: 인자 없음(빌드하고 띄운 뒤 응답이 오면 브라우저 열기), `stop`, `logs`, `db`, `backup`, `smoke`. 이 폴더에서 cmd는 `quack`, PowerShell은 `.\quack`으로 부른다.
 
 - 컨테이너 이름은 `quack-app`, `quack-db-1`이고 compose 프로젝트 이름은 `quack`이다.
 - **8000, 5432 포트는 이 PC의 다른 프로젝트가 쓰고 있다.** 그래서 8765와 15432를 쓴다. 바꿀 때는 충돌을 먼저 확인할 것.
 - 정적 파일이 jar 안에 들어가므로, **index.html을 고친 뒤에는 `docker compose up -d --build app`으로 다시 빌드**해야 Docker 쪽에 반영된다.
-- 백업: `docker compose exec db pg_dump -U postgres postgres > backup.sql` (`.gitignore`에 포함됨)
+- 백업: `quack backup` → `backups/quack-YYYYMMDD-HHMM.sql`. `backups/`는 gitignore되어 있고, pre-commit과 CI도 막는다.
+- 복원(빈 DB에만): `docker compose exec -T db psql -U postgres postgres < backups/파일.sql`. 데이터가 있는 DB에 복원하면 충돌하므로 먼저 사용자와 상의한다.
 
 ## 데이터 모델
 테이블은 `items` 하나다. 이슈와 문서를 한 테이블에 두는 이유는 검색을 한 번에 하기 위해서다.
@@ -77,22 +86,55 @@ src/main/resources/
 - **보안 규칙**:
   - 마크다운은 반드시 `DOMPurify.sanitize(marked.parse(...))`로만 렌더링한다. Claude가 MCP로 쓴 글도 여기로 들어온다.
   - 그 밖의 텍스트는 `esc()`로 이스케이프하거나 `textContent`로 넣는다.
-- 스타일은 **글래스모피즘**이다. `--wall`(그라데이션 배경) 위에 사이드바, 보드 컬럼, 문서, 다이얼로그가 반투명 패널(`--glass`, `--blur`)로 뜬다. 버튼과 입력창은 pill 모양이다. 색은 `:root`의 CSS 변수로 관리하고, 다크 모드는 `prefers-color-scheme`로 처리한다. 새 색을 하드코딩하지 말 것.
-  - `backdrop-filter`는 바깥 패널에만 건다. 안쪽 요소(카드 등)는 `--glass-hi` 배경만 쓴다. 겹쳐 걸면 안쪽 블러가 부모 안만 흐리게 해서 의미가 없다.
+- 스타일은 **글래스모피즘**이다. 화면을 고치기 전에 **`docs/design.md`를 먼저 읽는다**(토큰, 반경, 컴포넌트 규칙, 마스코트). 색은 `:root` CSS 변수로만 쓰고, `backdrop-filter`는 바깥 패널에만 건다.
 - 단축키: `/` 검색, `n` 새로 만들기, `Ctrl+S` 문서 저장, `Esc` 편집 취소. 저장 안 한 변경이 있으면 취소나 창 닫기 때 확인한다.
 - 이슈 다이얼로그 저장은 form의 `submit` 이벤트(`e.submitter.value === 'save'`)에서 처리한다. `dialog`의 `close` 이벤트는 내장 브라우저에서 발생하지 않은 적이 있어서 쓰지 않는다.
-- **마스코트**: `mascot(mood, size)`가 인라인 SVG를 만든다. mood는 `idle`, `proud`, `shock`, `cry`다. `hey(mood, 대사)`는 빈 상태에 쓰는 마스코트 + 대사 묶음이다. 대사는 허세 부리고 투덜대는 반말 톤이다(예: "할 일이 없다! 역시 나야!", "꽥?! 없는데…?").
-  - 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**다. 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
-  - 사용자가 캐릭터 이미지 세트를 줄 수 있다. 그때는 `mascot()`이 `static/mascot/{mood}.png`를 쓰도록 바꾸고, 이미지가 없는 표정만 SVG로 남긴다.
+- **마스코트**: `mascot(mood, size)`와 `hey(mood, 대사)`. 표정과 대사 톤은 `docs/design.md`에 있다. 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**라서 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
 
 ## 검증 방법 (작업 후 반드시)
-1. `docker compose up -d --build` → `docker logs quack-app`에서 `Started QuackApplication`와 `Registered tools: 4`를 확인한다.
-2. REST: curl로 생성, 수정, 검색, 404, cascade 삭제를 확인한다.
-   - **Windows Git Bash에서 `curl -d '한글'`을 쓰면 인코딩이 깨진다.** 본문을 heredoc으로 파일에 쓰고 `--data-binary @file`로 보낼 것.
-3. MCP: `initialize` → `Mcp-Session-Id` 헤더 받기 → `notifications/initialized` → `tools/list`, `tools/call` 순서로 호출한다. 헤더 `Accept: application/json, text/event-stream`이 필요하다. 이 폴더에서 연 Claude Code 세션이면 `quack` MCP 도구를 직접 호출해도 된다.
-4. 화면: 브라우저로 보드(추가, 드래그, 다이얼로그), 문서(생성, 편집, 저장, 하위 페이지), 검색을 확인한다. 라이트와 다크 둘 다 본다.
+1. `docker compose up -d --build app` → `docker logs quack-app`에서 `Started QuackApplication`와 `Registered tools: 4`를 확인한다.
+2. `bash scripts/smoke.sh` (또는 `quack smoke`): REST 생성·수정·한글 검색·404·cascade 삭제와 MCP `tools/list`를 확인하고, 만든 `[SMOKE]` 데이터는 실패해도 지운다. API나 MCP 동작을 바꾸면 이 스크립트도 같이 고친다.
+   - **Windows Git Bash에서 curl 인자에 한글을 넣으면 깨진다.** 본문은 파일로 만들어 `--data-binary @file`로 보낸다(스크립트가 이미 그렇게 한다).
+   - MCP를 손으로 부를 때: `initialize` → `Mcp-Session-Id` 헤더 → `notifications/initialized` → `tools/list`/`tools/call`. 헤더 `Accept: application/json, text/event-stream`이 필요하다.
+3. 화면: 브라우저 미리보기는 `.claude/launch.json`의 `quack`(이미 떠 있는 8765에 붙는다). 보드(추가, 드래그, 다이얼로그), 문서(생성, 편집, 저장, 하위 페이지), 검색을 확인한다. 라이트와 다크 둘 다 본다.
    - DevTools 콘솔의 `$`는 페이지의 `$`가 아니다. `document.getElementById`를 쓸 것.
-5. **테스트 데이터는 반드시 지운다.** 사용자의 실제 데이터가 들어 있는 DB다.
+4. **손으로 만든 테스트 데이터는 반드시 지운다.** 사용자의 실제 데이터가 들어 있는 DB다.
+
+## 하네스
+| 계층 | 위치 | 역할 |
+|---|---|---|
+| 규칙 | `AGENTS.md`(= `CLAUDE.md`), `docs/design.md` | 무엇을 지키는가 |
+| 계획 | `docs/plan.md` | 무엇을 할 차례인가 |
+| AI 가드 | `.claude/settings.json` → `.claude/hooks/guard.sh` | Bash·PowerShell 명령 중 `compose down -v`, `volume rm/prune`, force push, `reset --hard`, `DROP`/`TRUNCATE`, WHERE 없는 `DELETE FROM items`를 실행 전에 막는다 |
+| Git 훅 | `.githooks/` (`git config core.hooksPath .githooks`로 켬, 이 PC는 켜져 있음) | 커밋 메시지 형식, `.env`·키·`backups/` 커밋 차단, compose 포트가 `127.0.0.1`이 아니면 차단 |
+| CI | `.github/workflows/ci.yml` | push마다 compose로 띄우고 `scripts/smoke.sh` 실행 |
+
+- 가드는 명령 문자열을 정규식으로 본다. 그래서 그 문구를 `echo`나 `grep`해도 막힌다. 정말 필요한 명령이면 사용자에게 직접 실행해 달라고 한다. 가드를 끄거나 우회하지 않는다.
+- `.claude/settings.json`을 고치면 새 세션부터 반영될 수 있다.
+
+## 작업 흐름
+1. `docs/plan.md`에서 항목을 고르거나, 새 요청이면 거기 항목을 먼저 적는다(작은 수정은 생략).
+2. 관련 코드와 호출자를 읽고 최소로 구현한다.
+3. 위 "검증 방법"을 실행한다.
+4. 커밋한다. 브랜치는 `main` 하나만 쓰고 PR은 쓰지 않는다(혼자 쓰는 저장소). **push는 사용자가 요청할 때만** 한다.
+5. `docs/plan.md`에서 체크하고 커밋 해시를 붙인다.
+
+### 커밋 메시지
+`<gitmoji> <type>: <명령형 요약>`. `.githooks/commit-msg`가 검사한다. 본문 끝에 `Co-Authored-By` 줄을 붙인다.
+
+| gitmoji | type | 예 |
+|---|---|---|
+| ✨ | feat | `✨ feat: 문서의 QK 번호를 이슈 링크로 표시` |
+| 🐛 | fix | `🐛 fix: 편집 중 이동 시 변경 유실 방지` |
+| ♻️ | refactor | `♻️ refactor: 검색 쿼리 정리` |
+| ✅ | test | `✅ test: 스모크에 하위 페이지 검증 추가` |
+| 📝 | docs | `📝 docs: README 작성` |
+| 🚀 | infra | `🚀 infra: CI에 스모크 테스트 추가` |
+| 🔧 | chore | `🔧 chore: 실행 스크립트 정리` |
+| ⚡️ | perf | `⚡️ perf: 검색 인덱스 추가` |
+| 🔒 | security | `🔒 security: 포트 바인딩 검사 강화` |
+
+- 제목은 짧게 한 문장으로, 명령형(`추가`, `수정`, `제거`)으로 쓴다. 커밋 하나에 의도 하나만 담는다.
 
 ## 하지 말 것
 - `docker compose down -v` 금지. 볼륨에 사용자 데이터가 있다. 데이터를 지워야 하는 작업은 먼저 사용자에게 확인한다.
@@ -100,10 +142,5 @@ src/main/resources/
 - 프론트에 React, Tailwind, 번들러를 들이지 않는다(사용자가 가벼운 구성을 원함).
 - 앱 안에 LLM API 호출이나 채팅 UI를 넣지 않는다. AI 쪽은 MCP를 통해서만 붙인다.
 
-## 남은 작업 (우선순위 순 아님)
-- 문서 본문의 `QK-12`를 해당 이슈로 이동하는 링크로 바꾸기 (지라와 위키 연결)
-- 편집 중에 사이드바로 다른 문서로 이동하면 확인 없이 내용이 사라짐
-- 이슈 설명의 마크다운 미리보기
-- README (실행 방법, MCP 연결 방법)
-- Claude Desktop MCP 연결 (mcp-remote)
-- 검색 품질이 부족해지면 pgvector 임베딩 검색
+## 남은 작업
+`docs/plan.md`에 있다. 여기에 따로 적지 않는다.
