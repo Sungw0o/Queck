@@ -255,6 +255,7 @@ document.head.insertAdjacentHTML('beforeend',
   `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(mascot('idle'))}">`);
 
 let editing = null;     // issue open in the dialog
+let issueSaving = false;
 let issueDoc = 'body';  // selected document; switching does not discard either draft
 let page = null;        // page open in the docs view
 let pages = [];         // all pages, for the tree and breadcrumbs
@@ -263,9 +264,15 @@ let routed = '';        // location.hash of the view on screen, restored when le
 let editNext = false;   // open the next routed page straight in edit mode
 
 async function api(path, opts = {}) {
-  const r = await fetch('/api/' + path, {
-    ...opts, headers: { 'Content-Type': 'application/json' }, body: opts.body && JSON.stringify(opts.body),
-  });
+  let r;
+  try {
+    r = await fetch('/api/' + path, {
+      ...opts, headers: { 'Content-Type': 'application/json' }, body: opts.body && JSON.stringify(opts.body),
+    });
+  } catch (error) {
+    alert('서버에 연결하지 못했어요. 입력 내용은 그대로 두고 잠시 후 다시 시도해 주세요.');
+    throw error;
+  }
   if (!r.ok) { alert(`서버 오류 ${r.status}`); throw new Error(r.status) }
   const text = await r.text();
   return text ? JSON.parse(text) : null;
@@ -356,6 +363,19 @@ function edit(i) {
   $('dlg').showModal();
 }
 
+// ponytail: drafts live in the form; add localStorage recovery if crash recovery becomes necessary.
+function isIssueDirty() {
+  if (!$('dlg').open) return false;
+  const original = editing ?? { title: '', body: '', agent_body: '', prio: 'mid', status: 'todo' };
+  return ['title', 'body', 'agent_body', 'prio', 'status'].some(field => F[field].value !== (original[field] ?? ''));
+}
+
+function confirmIssueDiscard() {
+  return !issueSaving && (!isIssueDirty() || confirm('저장하지 않은 이슈 변경이 있어요. 버릴까요?'));
+}
+
+$('dlg').oncancel = e => { if (!confirmIssueDiscard()) e.preventDefault() };
+
 $('iHuman').onclick = () => showIssueDoc('body');
 $('iAgent').onclick = () => showIssueDoc('agent_body');
 $('iPreviewToggle').onclick = () => {
@@ -370,15 +390,32 @@ $('iPreviewToggle').onclick = () => {
 };
 
 $('dlg').querySelector('form').onsubmit = async e => {
-  if (e.submitter?.value !== 'save') return;
+  e.preventDefault(); // method=dialog must not close before the request succeeds.
+  if (issueSaving) return;
+  if (e.submitter?.value !== 'save') {
+    if (confirmIssueDiscard()) $('dlg').close();
+    return;
+  }
   const body = { title: F.title.value.trim(), prio: F.prio.value, status: F.status.value };
   // Only send changed documents, so saving a human summary preserves an agent's unrelated update.
   for (const field of ['body', 'agent_body']) {
     if (!editing || F[field].value !== (editing[field] ?? '')) body[field] = F[field].value;
   }
-  await (editing ? api('items/' + editing.id, { method: 'PATCH', body })
-                 : api('items', { method: 'POST', body: { kind: 'issue', ...body } }));
-  renderBoard();
+  const controls = [...F];
+  issueSaving = true;
+  for (const control of controls) control.disabled = true;
+  try {
+    await (editing ? api('items/' + editing.id, { method: 'PATCH', body })
+                   : api('items', { method: 'POST', body: { kind: 'issue', ...body } }));
+    $('dlg').close();
+    await renderBoard();
+  } catch (error) {
+    // api() displays the error; keep the open dialog and both drafts for a retry.
+    console.error(error);
+  } finally {
+    issueSaving = false;
+    for (const control of controls) control.disabled = false;
+  }
 };
 
 $('del').onclick = async () => {
@@ -514,11 +551,12 @@ document.onkeydown = e => {
   else if (e.key === 'n') { e.preventDefault(); $('docs').hidden ? edit(null) : newPage() }
 };
 
-onbeforeunload = e => { if (isDirty()) e.preventDefault() };
+onbeforeunload = e => { if (isDirty() || isIssueDirty() || issueSaving) e.preventDefault() };
 // Sidebar, search and breadcrumb links all change the hash; route() would re-render and drop the edit.
 // replaceState puts the old hash back without firing another hashchange.
 onhashchange = () => {
-  if (!confirmDiscard()) return history.replaceState(null, '', routed);
+  if (!confirmDiscard() || !confirmIssueDiscard()) return history.replaceState(null, '', routed);
+  if ($('dlg').open) $('dlg').close();
   route();
 };
 route();

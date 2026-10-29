@@ -105,6 +105,7 @@ src/main/resources/
 - 스타일은 **글래스모피즘**이다. 화면을 고치기 전에 **`docs/design.md`를 먼저 읽는다**(토큰, 반경, 컴포넌트 규칙, 마스코트). 색은 `:root` CSS 변수로만 쓰고, `backdrop-filter`는 바깥 패널에만 건다.
 - 단축키: `/` 검색, `n` 새로 만들기, `Ctrl+S` 문서 저장, `Esc` 편집 취소. 저장 안 한 변경이 있으면 취소나 창 닫기 때 확인한다.
 - 이슈 다이얼로그 저장은 form의 `submit` 이벤트(`e.submitter.value === 'save'`)에서 처리한다. `dialog`의 `close` 이벤트는 내장 브라우저에서 발생하지 않은 적이 있어서 쓰지 않는다.
+- 이슈 `submit`은 기본 닫기를 막고 저장 성공 후에만 닫는다. `issueSaving` 동안 폼 전체와 취소·Esc·이동을 막으며, 실패하면 폼을 활성화하고 두 문서의 초안을 유지한다. 취소·Esc·해시 이동은 `confirmIssueDiscard()`, 새로고침은 `isIssueDirty()`로 보호한다. 회귀 검사: `node scripts/issue-preview.test.mjs` (CI에서도 실행).
 - **마스코트**: `mascot(mood, size)`와 `hey(mood, 대사)`. 표정과 대사 톤은 `docs/design.md`에 있다. 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**라서 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
 
 ## 검증 방법 (작업 후 반드시)

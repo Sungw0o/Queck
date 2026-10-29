@@ -22,6 +22,9 @@ jobs:
       - name: Agent guard rules (Claude + Codex hook)
         run: node scripts/guard.test.mjs
 
+      - name: Issue documents, draft retention and save failures
+        run: node scripts/issue-preview.test.mjs
+
       - name: Build and start (same compose as local)
         run: docker compose up -d --build
 
