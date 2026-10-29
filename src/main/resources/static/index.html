@@ -125,6 +125,7 @@ dialog form { display: grid; gap: 12px }
 dialog input[name=title] { font-size: 20px; font-weight: 700; border: 0; outline: none; background: transparent; padding: 0 }
 dialog textarea { min-height: 160px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--glass); outline: none; resize: vertical }
 dialog textarea:focus { border-color: var(--accent) }
+#iPreview { min-height: 160px; max-height: 45vh; overflow-y: auto }
 .fields { display: flex; gap: 8px }
 .fields select { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--glass) }
 #del { color: var(--high); margin-right: auto }
@@ -179,7 +180,9 @@ dialog textarea:focus { border-color: var(--accent) }
   <form method="dialog">
     <span id="dlgKey"></span>
     <input name="title" placeholder="이슈 제목" required autocomplete="off">
-    <textarea name="body" placeholder="설명 (마크다운)"></textarea>
+    <div><button type="button" id="iPreviewToggle" aria-pressed="false" aria-controls="iPreview">미리보기</button></div>
+    <textarea id="iBody" name="body" placeholder="설명 (마크다운)"></textarea>
+    <div id="iPreview" class="md" hidden></div>
     <div class="fields"><select name="status"></select><select name="prio"></select></div>
     <div class="row">
       <button type="button" id="del">삭제</button>
@@ -322,11 +325,27 @@ function edit(i) {
   $('dlgKey').textContent = i ? `QK-${i.id}` : '새 이슈';
   F.title.value = i?.title ?? '';
   F.body.value = i?.body ?? '';
+  F.body.hidden = false;
+  $('iPreview').hidden = true;
+  $('iPreview').replaceChildren();
+  $('iPreviewToggle').textContent = '미리보기';
+  $('iPreviewToggle').setAttribute('aria-pressed', 'false');
   F.prio.value = i?.prio ?? 'mid';
   F.status.value = i?.status ?? 'todo';
   $('del').hidden = !i;
   $('dlg').showModal();
 }
+
+$('iPreviewToggle').onclick = () => {
+  const preview = $('iPreview').hidden;
+  if (preview) $('iPreview').innerHTML = F.body.value.trim()
+    ? DOMPurify.sanitize(marked.parse(F.body.value))
+    : '<p class="muted">설명이 비어 있어요.</p>';
+  F.body.hidden = preview;
+  $('iPreview').hidden = !preview;
+  $('iPreviewToggle').textContent = preview ? '작성' : '미리보기';
+  $('iPreviewToggle').setAttribute('aria-pressed', String(preview));
+};
 
 $('dlg').querySelector('form').onsubmit = async e => {
   if (e.submitter?.value !== 'save') return;
@@ -345,6 +364,32 @@ $('del').onclick = async () => {
 
 // ---- docs ----
 
+function linkIssues(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => node.parentElement.closest('a, code, pre, script, style, textarea')
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const matches = [...node.textContent.matchAll(/\bQK-(\d+)\b/g)];
+    if (!matches.length) continue;
+    const fragment = document.createDocumentFragment();
+    let start = 0;
+    for (const match of matches) {
+      fragment.append(node.textContent.slice(start, match.index));
+      const link = document.createElement('a');
+      link.href = '#issue/' + match[1];
+      link.className = 'key';
+      link.textContent = match[0];
+      fragment.append(link);
+      start = match.index + match[0].length;
+    }
+    fragment.append(node.textContent.slice(start));
+    node.replaceWith(fragment);
+  }
+}
+
 async function renderDoc(id, startEdit) {
   $('empty').hidden = !!id;
   $('page').hidden = !id;
@@ -362,6 +407,7 @@ function showView() {
   $('vBody').innerHTML = page.body.trim()
     ? DOMPurify.sanitize(marked.parse(page.body))
     : '<p class="muted">비어 있는 문서예요. 편집을 눌러 작성해 보세요.</p>';
+  linkIssues($('vBody'));
   $('view').hidden = false;
   $('edit').hidden = true;
   $('pEdit').hidden = false;
