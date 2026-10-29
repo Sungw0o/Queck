@@ -19,6 +19,9 @@ jobs:
           bad=$(git ls-files | grep -E '(\.env($|\..+)|\.pem$|\.key$|id_rsa|(^|/)backups/|(^|/)backup\.sql$)' | grep -v '\.env\.example$' || true)
           [ -z "$bad" ] || { echo "$bad"; exit 1; }
 
+      - name: Agent guard rules (Claude + Codex hook)
+        run: node scripts/guard.test.mjs
+
       - name: Build and start (same compose as local)
         run: docker compose up -d --build
 
