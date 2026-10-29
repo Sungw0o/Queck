@@ -1,0 +1,30 @@
+name: quack
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: quack   # local only: the port is bound to 127.0.0.1
+    ports:
+      - "127.0.0.1:15432:5432"  # for running the app from IntelliJ
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 2s
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: quack-app
+    ports:
+      - "127.0.0.1:8765:8080"   # localhost only, there is no auth
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db/postgres
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

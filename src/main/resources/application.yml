@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    # IntelliJ run hits the compose DB on its published port; the container overrides this via env
+    url: jdbc:postgresql://localhost:15432/postgres
+    username: postgres
+    password: quack
+  sql:
+    init:
+      mode: always
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true   # always revalidate, so a rebuilt UI shows up without a hard refresh
+  ai:
+    mcp:
+      server:
+        name: quack
+        version: 1.0.0
+        protocol: STREAMABLE
