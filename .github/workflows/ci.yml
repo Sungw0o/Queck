@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No secrets or DB dumps in the tree
+        run: |
+          bad=$(git ls-files | grep -E '(\.env($|\..+)|\.pem$|\.key$|id_rsa|(^|/)backups/|(^|/)backup\.sql$)' | grep -v '\.env\.example$' || true)
+          [ -z "$bad" ] || { echo "$bad"; exit 1; }
+
+      - name: Build and start (same compose as local)
+        run: docker compose up -d --build
+
+      - name: Smoke test (REST + MCP)
+        run: bash scripts/smoke.sh
+
+      - name: App logs on failure
+        if: failure()
+        run: docker compose logs app
