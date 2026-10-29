@@ -12,6 +12,7 @@
 docker-compose.yml        postgres:16 + app. 둘 다 127.0.0.1에만 바인딩
 Dockerfile                gradle:jdk21로 빌드 → temurin 21 jre, -Xmx256m
 build.gradle              Spring Boot 4.1.2 + Spring AI BOM 2.0.2 (두 버전은 짝이 맞아야 함)
+README.md                 사람용 소개, 실행, Claude 연결, 백업. quack 명령이나 연결 방법을 바꾸면 같이 고친다
 quack.bat                 띄우기와 운영 명령 (아래 "실행" 참고)
 .mcp.json                 Claude Code용 MCP 연결 (http://localhost:8765/mcp)
 docs/plan.md              개발 계획. 남은 일의 기준
