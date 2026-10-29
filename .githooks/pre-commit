@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Block secrets and DB dumps (backups hold the user's real data) from being committed.
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+forbidden=$(grep -E '(\.env($|\..+)|\.pem$|\.key$|id_rsa|(^|/)backups/|(^|/)backup\.sql$)' <<<"$staged" | grep -v '\.env\.example$' || true)
+if [ -n "$forbidden" ]; then
+    echo "❌ [pre-commit] 커밋하면 안 되는 파일이 스테이징되었습니다:"
+    echo "$forbidden"
+    echo "비밀정보와 DB 백업은 커밋하지 않습니다. git restore --staged <파일> 로 빼세요."
+    exit 1
+fi
+
+if git diff --cached | grep -Eq -- 'BEGIN (RSA|OPENSSH|EC|DSA)? ?PRIVATE KEY'; then
+    echo "❌ [pre-commit] 변경사항에 Private Key 내용이 있습니다."
+    exit 1
+fi
+
+# Ports must stay on 127.0.0.1: the app has no auth.
+if git diff --cached -U0 -- docker-compose.yml | grep -E '^\+' | grep -E '"?[0-9]+:[0-9]+"?' | grep -vq '127\.0\.0\.1:'; then
+    echo "❌ [pre-commit] docker-compose.yml 포트는 127.0.0.1에만 바인딩합니다 (인증이 없음)."
+    exit 1
+fi
+
+exit 0
