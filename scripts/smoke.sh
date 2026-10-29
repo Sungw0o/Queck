@@ -73,6 +73,7 @@ ok "MCP tools: search get create update"
 
 # Claude Desktop reaches the same tools through the stdio bridge
 if command -v node > /dev/null; then
+  node "$(dirname "$0")/rag-smoke.mjs" "$BASE"
   printf '%s\n' \
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
     '{"jsonrpc":"2.0","method":"notifications/initialized"}' \

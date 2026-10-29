@@ -118,7 +118,7 @@ section h2 { display: flex; align-items: center; gap: 8px; font-size: 13px; marg
 .md img { max-width: 100%; border-radius: 12px }
 
 /* issue dialog */
-dialog { border-radius: 24px; padding: 24px; color: var(--text); width: min(560px, 92vw); background: var(--glass-hi) }
+dialog { border-radius: 24px; padding: 24px; color: var(--text); width: min(560px, 92vw); max-height: 90vh; overflow-y: auto; background: var(--glass-hi) }
 dialog::backdrop { background: rgb(10 15 30 / .25); backdrop-filter: blur(4px) }
 dialog form { display: grid; gap: 12px }
 #dlgKey { font-size: 12px; color: var(--muted); font-family: ui-monospace, Consolas, monospace }
@@ -127,6 +127,7 @@ dialog textarea { min-height: 160px; border: 1px solid var(--line); border-radiu
 dialog textarea:focus { border-color: var(--accent) }
 #iPreview { min-height: 160px; max-height: 45vh; overflow-y: auto }
 .fields { display: flex; gap: 8px }
+.fields button[aria-pressed=true] { background: var(--hover); font-weight: 600 }
 .fields select { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--glass) }
 #del { color: var(--high); margin-right: auto }
 </style>
@@ -180,8 +181,14 @@ dialog textarea:focus { border-color: var(--accent) }
   <form method="dialog">
     <span id="dlgKey"></span>
     <input name="title" placeholder="이슈 제목" required autocomplete="off">
-    <div><button type="button" id="iPreviewToggle" aria-pressed="false" aria-controls="iPreview">미리보기</button></div>
-    <textarea id="iBody" name="body" placeholder="설명 (마크다운)"></textarea>
+    <div class="fields">
+      <button type="button" id="iHuman" aria-pressed="true" aria-controls="iBody">사람용 요약</button>
+      <button type="button" id="iAgent" aria-pressed="false" aria-controls="iAgentBody">에이전트 문서</button>
+      <button type="button" id="iPreviewToggle" aria-pressed="false" aria-controls="iPreview">미리보기</button>
+    </div>
+    <p id="iDocHelp" class="muted pad"></p>
+    <textarea id="iBody" name="body" aria-label="사람용 요약" placeholder="무엇을 왜 하는지, 완료 조건을 짧게 적으세요."></textarea>
+    <textarea id="iAgentBody" name="agent_body" aria-label="에이전트 문서" hidden placeholder="## 목표&#10;&#10;## 완료 조건&#10;&#10;## 결정과 근거&#10;&#10;## 진행 상황&#10;&#10;## 검증 결과&#10;&#10;## 막힌 점과 다음 작업&#10;&#10;## 관련 이슈·문서·출처"></textarea>
     <div id="iPreview" class="md" hidden></div>
     <div class="fields"><select name="status"></select><select name="prio"></select></div>
     <div class="row">
@@ -222,6 +229,7 @@ $('empty').innerHTML = hey('idle', '문서를 골라라!<br>아니면 <b>+</b> �
 document.head.insertAdjacentHTML('beforeend', '<link rel="icon" type="image/png" href="/mascot/idle.png">');
 
 let editing = null;     // issue open in the dialog
+let issueDoc = 'body';  // selected document; switching does not discard either draft
 let page = null;        // page open in the docs view
 let pages = [];         // all pages, for the tree and breadcrumbs
 let current = 'board';  // hash of the active view, for sidebar highlight
@@ -259,8 +267,8 @@ async function search() {
   $('treeWrap').hidden = !!q;
   if (!q) return;
   const hits = await api('search?q=' + encodeURIComponent(q));
-  $('results').innerHTML = hits.map(h => `<a href="#${h.kind === 'issue' ? 'issue' : 'docs'}/${h.id}">
-      <span class="tag">${h.kind === 'issue' ? 'QK-' + h.id : '문서'}</span>${esc(h.title)}
+  $('results').innerHTML = hits.map(h => `<a href="#${h.kind === 'issue' ? 'issue' : 'docs'}/${h.id}${h.kind === 'issue' && h.source === 'agent_body' ? '/agent' : ''}">
+      <span class="tag">${h.kind === 'issue' ? 'QK-' + h.id : '문서'}${h.source === 'agent_body' ? ' · 에이전트 문서' : ''}</span>${esc(h.title)}
       <small>${esc(h.snippet.slice(0, 80))}</small></a>`).join('') || hey('shock', '꽥?! 없는데…?<br>다른 말로 찾아봐!');
 }
 
@@ -294,28 +302,42 @@ async function renderBoard() {
   }
 }
 
+function showIssueDoc(name) {
+  issueDoc = name;
+  F.body.hidden = name !== 'body';
+  F.agent_body.hidden = name !== 'agent_body';
+  $('iPreview').hidden = true;
+  $('iPreview').replaceChildren();
+  $('iPreviewToggle').textContent = '미리보기';
+  $('iPreviewToggle').setAttribute('aria-pressed', 'false');
+  $('iHuman').setAttribute('aria-pressed', String(name === 'body'));
+  $('iAgent').setAttribute('aria-pressed', String(name === 'agent_body'));
+  $('iDocHelp').textContent = name === 'body'
+    ? '사람이 빠르게 읽을 핵심과 완료 조건을 적으세요.'
+    : '에이전트가 이어받을 결정·진행·검증·다음 작업과 출처를 적으세요. 두 문서 모두 검색됩니다.';
+}
+
 function edit(i) {
   editing = i;
   $('dlgKey').textContent = i ? `QK-${i.id}` : '새 이슈';
   F.title.value = i?.title ?? '';
   F.body.value = i?.body ?? '';
-  F.body.hidden = false;
-  $('iPreview').hidden = true;
-  $('iPreview').replaceChildren();
-  $('iPreviewToggle').textContent = '미리보기';
-  $('iPreviewToggle').setAttribute('aria-pressed', 'false');
+  F.agent_body.value = i?.agent_body ?? '';
+  showIssueDoc('body');
   F.prio.value = i?.prio ?? 'mid';
   F.status.value = i?.status ?? 'todo';
   $('del').hidden = !i;
   $('dlg').showModal();
 }
 
+$('iHuman').onclick = () => showIssueDoc('body');
+$('iAgent').onclick = () => showIssueDoc('agent_body');
 $('iPreviewToggle').onclick = () => {
   const preview = $('iPreview').hidden;
-  if (preview) $('iPreview').innerHTML = F.body.value.trim()
-    ? DOMPurify.sanitize(marked.parse(F.body.value))
-    : '<p class="muted">설명이 비어 있어요.</p>';
-  F.body.hidden = preview;
+  if (preview) $('iPreview').innerHTML = F[issueDoc].value.trim()
+    ? DOMPurify.sanitize(marked.parse(F[issueDoc].value))
+    : '<p class="muted">문서가 비어 있어요.</p>';
+  F[issueDoc].hidden = preview;
   $('iPreview').hidden = !preview;
   $('iPreviewToggle').textContent = preview ? '작성' : '미리보기';
   $('iPreviewToggle').setAttribute('aria-pressed', String(preview));
@@ -323,7 +345,11 @@ $('iPreviewToggle').onclick = () => {
 
 $('dlg').querySelector('form').onsubmit = async e => {
   if (e.submitter?.value !== 'save') return;
-  const body = { title: F.title.value.trim(), body: F.body.value, prio: F.prio.value, status: F.status.value };
+  const body = { title: F.title.value.trim(), prio: F.prio.value, status: F.status.value };
+  // Only send changed documents, so saving a human summary preserves an agent's unrelated update.
+  for (const field of ['body', 'agent_body']) {
+    if (!editing || F[field].value !== (editing[field] ?? '')) body[field] = F[field].value;
+  }
   await (editing ? api('items/' + editing.id, { method: 'PATCH', body })
                  : api('items', { method: 'POST', body: { kind: 'issue', ...body } }));
   renderBoard();
@@ -436,11 +462,11 @@ $('pDel').onclick = async () => {
 // ---- routing & keys ----
 
 async function route() {
-  let [view, id] = location.hash.slice(1).split('/');
+  let [view, id, doc] = location.hash.slice(1).split('/');
   if (view === 'issue') {  // search hit on an issue: show the board with it open
     history.replaceState(null, '', '#board');
     view = 'board';
-    api('items/' + id).then(edit);
+    api('items/' + id).then(i => { edit(i); if (doc === 'agent') showIssueDoc('agent_body') });
   }
   routed = location.hash || '#board';
   const docs = view === 'docs';

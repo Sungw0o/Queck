@@ -13,7 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api")
 class ItemController {
 
-    record NewItem(String kind, String title, String body, String status, String prio, Long parentId) {}
+    record NewItem(String kind, String title, String body, String agentBody, String status, String prio, Long parentId) {}
 
     private final ItemRepository repo;
 
@@ -38,7 +38,7 @@ class ItemController {
 
     @PostMapping("/items")
     Item create(@RequestBody NewItem i) {
-        return repo.create(i.kind(), i.title(), i.body(), i.status(), i.prio(), i.parentId());
+        return repo.create(i.kind(), i.title(), i.body(), i.agentBody(), i.status(), i.prio(), i.parentId());
     }
 
     @PatchMapping("/items/{id}")
