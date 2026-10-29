@@ -37,12 +37,13 @@ src/main/resources/
 | 전체 (Docker) | `quack` (또는 `quack.bat` 더블클릭) | 앱 http://localhost:8765, MCP http://localhost:8765/mcp |
 | IntelliJ 개발 | `quack db` 후 IntelliJ에서 `QuackApplication` 실행 | 앱 http://localhost:8080, DB localhost:15432 |
 
-`quack.bat` 명령: 인자 없음(빌드하고 띄운 뒤 응답이 오면 브라우저 열기), `stop`, `logs`, `db`, `backup`, `smoke`. 이 폴더에서 cmd는 `quack`, PowerShell은 `.\quack`으로 부른다.
+`quack.bat` 명령: 인자 없음(빌드하고 띄운 뒤 응답이 오면 브라우저 열기), `stop`, `logs`, `db`, `backup`, `schedule`, `smoke`. 이 폴더에서 cmd는 `quack`, PowerShell은 `.\quack`으로 부른다.
 
 - 컨테이너 이름은 `quack-app`, `quack-db-1`이고 compose 프로젝트 이름은 `quack`이다.
 - **8000, 5432 포트는 이 PC의 다른 프로젝트가 쓰고 있다.** 그래서 8765와 15432를 쓴다. 바꿀 때는 충돌을 먼저 확인할 것.
 - 정적 파일이 jar 안에 들어가므로, **index.html을 고친 뒤에는 `docker compose up -d --build app`으로 다시 빌드**해야 Docker 쪽에 반영된다.
-- 백업: `quack backup` → `backups/quack-YYYYMMDD-HHMM.sql`. `backups/`는 gitignore되어 있고, pre-commit과 CI도 막는다.
+- 백업: `quack backup` → `backups/quack-YYYYMMDD-HHMM.sql`. 덤프가 성공했을 때만 30일 지난 덤프를 지우고, 결과는 `backups/backup.log`에 한 줄씩 남긴다. `backups/`는 gitignore되어 있고, pre-commit과 CI도 막는다.
+  - **자동 백업**: 작업 스케줄러의 `Quack backup` 작업이 매일 12:00에 `quack backup`을 실행한다(이 PC는 등록됨, 새 PC는 `quack schedule`). 놓친 실행은 다음 로그인 때 하고, 노트북이라 배터리에서도 돈다. Docker가 꺼져 있으면 실패하고 로그에 `FAILED`를 남긴다. 실패가 쌓였는지는 `backup.log`로 확인한다.
 - 복원(빈 DB에만): `docker compose exec -T db psql -U postgres postgres < backups/파일.sql`. 데이터가 있는 DB에 복원하면 충돌하므로 먼저 사용자와 상의한다.
 
 ## 데이터 모델
