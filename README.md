@@ -49,10 +49,14 @@ quack
 
 PowerShell에서는 `.\quack`으로 부른다.
 
-## Claude 연결
+## AI 연결
+Claude Code, Codex, Claude Desktop 세 군데서 쓸 수 있다. 작업 규칙은 셋 다 [AGENTS.md](AGENTS.md)를 따른다.
 
 ### Claude Code
 이 폴더에서 Claude Code를 열면 `.mcp.json`으로 자동 연결된다. 처음 한 번만 `quack` 서버 사용을 승인하면 된다.
+
+### Codex
+이 폴더에서 Codex를 열면 `.codex/config.toml`로 연결된다. 처음 열 때 묻는 **프로젝트 신뢰**와 **훅 신뢰**를 허용해야 MCP와 가드가 켜진다. `search`와 `get`은 묻지 않고 바로 실행하고, `create`와 `update`는 매번 묻는다.
 
 ### Claude Desktop
 Desktop은 로컬 서버를 stdio로만 붙이기 때문에 `scripts/mcp-bridge.mjs`가 중간에서 이어 준다.
@@ -80,7 +84,8 @@ quack.bat                 실행과 운영 명령
 docker-compose.yml        postgres:16 + app (127.0.0.1에만 바인딩)
 src/main/java/quack/      Spring Boot 4 + Spring AI MCP 서버 (REST /api, MCP /mcp)
 src/main/resources/static/index.html   프론트 전부 (빌드 도구 없음)
-scripts/                  스모크 테스트, Claude Desktop 중계와 등록
+scripts/                  스모크 테스트, 위험 명령 가드, Claude Desktop 중계와 등록
+.claude/ .codex/          Claude Code와 Codex 설정 (MCP, 가드 훅)
 docs/plan.md              개발 계획
 docs/design.md            디자인 가이드
 AGENTS.md                 작업 지시서 (에이전트와 사람 공용)

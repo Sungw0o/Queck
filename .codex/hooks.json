@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|shell|PowerShell)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/guard.mjs",
+            "commandWindows": "node scripts/guard.mjs",
+            "timeout": 10,
+            "statusMessage": "위험 명령 확인 중"
+          }
+        ]
+      }
+    ]
+  }
+}

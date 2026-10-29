@@ -6,6 +6,7 @@
 - 사용자는 1명, PC 밖으로 노출하지 않는다. **로그인, 권한, 담당자, 스프린트 같은 팀 기능은 만들지 않는다.**
 - 원칙은 **최소 구현**이다. 새 의존성, 추상화, "나중을 위한" 구조는 넣지 않는다. 일부러 잘라낸 지점에는 `ponytail:` 주석으로 한계와 업그레이드 경로를 적는다.
 - 사용자는 한국어로 대화한다. 주력 스택은 Spring이다.
+- 이 문서는 **Claude Code와 Codex가 같이 쓴다.** Claude는 `CLAUDE.md`(`@AGENTS.md` 한 줄)로 읽고, Codex는 이 파일을 직접 읽는다. 도구별 설정은 `.claude/`와 `.codex/`에 따로 있고, 가드 스크립트와 MCP 주소는 둘이 같은 것을 쓴다.
 
 ## 구조
 ```
@@ -19,7 +20,9 @@ docs/plan.md              개발 계획. 남은 일의 기준
 docs/design.md            디자인 가이드 (토큰, 컴포넌트, 마스코트)
 scripts/smoke.sh          실행 중인 앱에 REST + MCP 스모크 테스트
 scripts/mcp-bridge.mjs    Claude Desktop용 stdio ↔ /mcp 중계 (Node 기본 기능만 씀)
-.claude/                  가드 훅(settings.json, hooks/guard.sh), 브라우저 미리보기(launch.json)
+scripts/guard.mjs         위험 명령 가드 (Claude·Codex 공용 PreToolUse 훅). 시험: node scripts/guard.test.mjs
+.claude/                  Claude Code: 가드 훅 연결(settings.json), 브라우저 미리보기(launch.json). MCP는 루트 .mcp.json
+.codex/                   Codex: Quack MCP와 도구 승인(config.toml), 가드 훅 연결(hooks.json)
 .githooks/                커밋 메시지 형식, 비밀정보·백업·포트 노출 검사
 .github/workflows/ci.yml  push마다 compose로 띄우고 스모크 테스트
 src/main/java/quack/
@@ -76,6 +79,8 @@ src/main/resources/
 - 도구는 `ItemTools`의 `@Tool` 메서드다. **도구 설명(description)은 Claude가 읽는 프롬프트**이므로 동작을 바꾸면 설명도 같이 고칠 것.
 - **MCP 응답 JSON은 camelCase**(`parentId`)다. REST는 snake_case다. Spring AI가 자체 매퍼를 쓰기 때문이고, 의도된 차이다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
+- 연결은 세 군데다. **Claude Code**: `.mcp.json`. **Codex**: `.codex/config.toml`의 `[mcp_servers.quack]`(streamable HTTP를 직접 지원해서 중계가 필요 없다). **Claude Desktop**: 아래. 주소를 바꾸면 셋 다 고친다.
+- 도구 승인: Codex는 `search`, `get`만 묻지 않고 실행하고 `create`, `update`는 묻는다(`[mcp_servers.quack.tools.<이름>] approval_mode = "approve"`). `codex exec`처럼 비대화형으로 돌리면 승인이 필요한 도구는 실패한다.
 - **Claude Desktop**은 로컬 서버를 stdio로만 붙이므로 `scripts/mcp-bridge.mjs`가 중계한다. 등록 위치는 `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude_desktop_config.json`의 `mcpServers.quack`이다(이 PC는 MSIX 설치라 `%APPDATA%\Claude`가 아니다). 값은 `node.exe` 절대경로와 스크립트 절대경로다. 등록은 `quack desktop`(`scripts/register-desktop.mjs`)으로 한다.
   - **Desktop이 켜져 있을 때 이 파일을 고치면 사라진다.** Desktop이 환경설정을 같은 파일에 쓰면서, 시작할 때 읽어 둔 내용으로 덮어쓴다. 그래서 `quack desktop`은 Desktop이 완전히 꺼질 때까지 기다렸다가 `.bak`을 만들고 `mcpServers.quack`만 병합한다.
   - Claude Code 세션 안에서 띄운 프로세스는 Desktop을 끌 때 같이 죽는다. 세션에서 등록을 돕는다면, 사용자가 직접 연 터미널에서 실행하게 하거나 작업 스케줄러로 띄운다.
@@ -112,12 +117,14 @@ src/main/resources/
 |---|---|---|
 | 규칙 | `AGENTS.md`(= `CLAUDE.md`), `docs/design.md` | 무엇을 지키는가 |
 | 계획 | `docs/plan.md` | 무엇을 할 차례인가 |
-| AI 가드 | `.claude/settings.json` → `.claude/hooks/guard.sh` | Bash·PowerShell 명령 중 `compose down -v`, `volume rm/prune`, force push, `reset --hard`, `DROP`/`TRUNCATE`, WHERE 없는 `DELETE FROM items`를 실행 전에 막는다 |
+| AI 가드 | `.claude/settings.json`, `.codex/hooks.json` → `scripts/guard.mjs` | Bash·PowerShell 명령 중 `compose down -v`, `volume rm/prune`, force push, `reset --hard`, `DROP`/`TRUNCATE`, WHERE 없는 `DELETE FROM items`를 실행 전에 막는다 |
 | Git 훅 | `.githooks/` (`git config core.hooksPath .githooks`로 켬, 이 PC는 켜져 있음) | 커밋 메시지 형식, `.env`·키·`backups/` 커밋 차단, compose 포트가 `127.0.0.1`이 아니면 차단 |
 | CI | `.github/workflows/ci.yml` | push마다 compose로 띄우고 `scripts/smoke.sh` 실행 |
 
 - 가드는 명령 문자열을 정규식으로 본다. 그래서 그 문구를 `echo`나 `grep`해도 막힌다. 정말 필요한 명령이면 사용자에게 직접 실행해 달라고 한다. 가드를 끄거나 우회하지 않는다.
 - `.claude/settings.json`을 고치면 새 세션부터 반영될 수 있다.
+- 가드는 Node로 쓴다. Codex는 Windows에서 Git Bash 없이 훅을 실행하기 때문이다(`bash`를 부르면 WSL이 잡힐 수 있다). 규칙을 바꾸면 `scripts/guard.test.mjs`에 케이스를 더하고 돌린다. CI도 돌린다.
+- Codex는 **프로젝트를 신뢰해야** `.codex/`를 읽고, 훅은 따로 **훅 신뢰**를 받아야 돈다. 둘 다 Codex가 처음 열 때 묻는다. 에이전트가 대신 신뢰를 켜거나 우회 옵션을 쓰지 않는다.
 
 ## 작업 흐름
 1. `docs/plan.md`에서 항목을 고르거나, 새 요청이면 거기 항목을 먼저 적는다(작은 수정은 생략).

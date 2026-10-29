@@ -1,0 +1,15 @@
+# Codex project config. Codex reads AGENTS.md by itself; this adds the Quack MCP server and the shared guard hook.
+# Claude Code equivalents: .mcp.json (same URL) and .claude/settings.json (same scripts/guard.mjs). Keep them in step.
+# Codex loads this file only after you trust the project (it asks the first time you open this folder).
+[features]
+hooks = true
+
+[mcp_servers.quack]
+url = "http://localhost:8765/mcp"
+
+# Read-only tools run without asking; create/update still ask. Same split as .claude/settings.json permissions.
+[mcp_servers.quack.tools.search]
+approval_mode = "approve"
+
+[mcp_servers.quack.tools.get]
+approval_mode = "approve"

@@ -11,6 +11,7 @@
 - [x] Claude Desktop용 MCP 중계와 `quack desktop` (`3cdd449`)
 - [x] README (`57902fc`, 캡처 4장은 비워 둠, 아래 "대기" 참고)
 - [x] M1 버그: 편집 중 사이드바·검색·브레드크럼으로 이동하면 변경이 사라짐 (`ea61e00`)
+- [x] Codex 지원: `.codex/`(MCP, 도구 승인, 가드 훅), 가드를 Claude·Codex 공용 Node로 이전
 
 ## M2. 지라 ↔ 위키 연결
 ### 문서 본문의 `QK-12`를 이슈 링크로
@@ -39,3 +40,4 @@
 - 마스코트 이미지 세트: 받으면 `static/mascot/{mood}.png`로 바꾼다 (`docs/design.md` 마스코트 절 참고).
 - README 캡처: `docs/images/`에 `board.png`, `docs.png`, `claude-search.png`, `dark.png`를 넣고 README의 "캡처 예정" 자리를 이미지로 바꾼다. 실제 데이터가 보이면 안 되는 내용은 가린다.
 - Claude Desktop 등록: Desktop 밖의 터미널에서 `quack desktop` → 트레이에서 종료 → 다시 켜기. 그 뒤 M3 항목의 완료 조건을 확인한다.
+- Codex 신뢰: 이 폴더를 Codex로 열고 프로젝트 신뢰와 훅 신뢰를 허용한다. 그 뒤 `echo`로 가드 문구를 실행해 막히는지 확인한다(MCP 검색은 확인 끝).
