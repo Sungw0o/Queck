@@ -4,6 +4,7 @@
 
 - 앱은 저장하고 검색만 한다. 답은 Claude(구독)가 **MCP**로 Quack을 검색하고 읽어서, 출처를 달아 만든다. 앱에 API 키나 LLM 호출은 없다.
 - PC 안에서만 돈다. 포트는 `127.0.0.1`에만 열리고, 로그인 같은 건 없다.
+- 첫 화면은 홈이다. 보드·문서·사용 가이드로 바로 이동할 수 있다. [사람용 가이드](src/main/resources/static/user-guide.md)와 [에이전트 가이드](src/main/resources/static/agent-guide.md)는 앱의 **사용 가이드** 메뉴에서도 읽고 마크다운으로 받을 수 있다.
 
 ## 화면
 
@@ -106,6 +107,7 @@ quack.bat                 실행과 운영 명령
 docker-compose.yml        postgres:16 + app (127.0.0.1에만 바인딩)
 src/main/java/quack/      Spring Boot 4 + Spring AI MCP 서버 (REST /api, MCP /mcp)
 src/main/resources/static/index.html   프론트 전부 (빌드 도구 없음)
+src/main/resources/static/*-guide.md  앱에서 읽는 사람용·에이전트용 가이드 원본
 scripts/                  스모크 테스트, 위험 명령 가드, Claude Desktop 중계와 등록
 .claude/ .codex/          Claude Code와 Codex 설정 (MCP, 가드 훅)
 docs/plan.md              개발 계획

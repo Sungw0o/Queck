@@ -25,6 +25,9 @@ jobs:
       - name: Issue documents, draft retention and save failures
         run: node scripts/issue-preview.test.mjs
 
+      - name: Home and guide navigation
+        run: node scripts/navigation.test.mjs
+
       - name: Build and start (same compose as local)
         run: docker compose up -d --build
 

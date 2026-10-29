@@ -98,7 +98,8 @@ src/main/resources/
 
 ## 프론트 (`static/index.html`)
 - 프레임워크, 빌드 도구, npm 없음. 외부 의존성은 CDN으로 버전을 고정한 3개뿐이다: Wanted Sans 1.0.3(폰트), marked 18.1.1, DOMPurify 3.4.17. 버전을 올릴 때는 배포된 지 2주 넘은 버전만 쓴다.
-- 라우팅은 해시로 한다: `#board`, `#docs`, `#docs/{id}`, `#issue/{id}`(보드로 바꾼 뒤 그 이슈 다이얼로그를 연다), `#issue/{id}/agent`(에이전트 문서를 선택해서 연다).
+- 라우팅은 해시로 한다: 기본 `#home`, `#board`, `#docs`, `#docs/{id}`, `#issue/{id}`(보드로 바꾼 뒤 그 이슈 다이얼로그를 연다), `#issue/{id}/agent`(에이전트 문서를 선택해서 연다), `#guide`·`#guide/agent`(사람용·에이전트 가이드).
+- 가이드 원본은 `static/user-guide.md`와 `static/agent-guide.md`다. 앱에서 정화해 렌더링하고 원본 다운로드를 제공하며 DB에는 자동 등록하지 않는다. 동작·단축키·MCP를 바꾸면 해당 가이드도 맞춘다. 홈·가이드·기존 작업 링크 검사는 `node scripts/navigation.test.mjs`로 실행한다.
 - **보안 규칙**:
   - 마크다운은 반드시 `DOMPurify.sanitize(marked.parse(...))`로만 렌더링한다. Claude가 MCP로 쓴 글도 여기로 들어온다.
   - 그 밖의 텍스트는 `esc()`로 이스케이프하거나 `textContent`로 넣는다.

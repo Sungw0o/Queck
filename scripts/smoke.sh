@@ -26,6 +26,13 @@ for i in $(seq 60); do
   sleep 1
 done
 
+# Bundled guides must be available from the same app as the home page.
+for guide in user-guide.md agent-guide.md; do
+  curl -sf "$BASE/$guide" > "$TMP/$guide" || fail "$guide is unavailable"
+  [ -s "$TMP/$guide" ] || fail "$guide is empty"
+done
+ok "bundled human and agent guides"
+
 # REST
 parent=$(send POST /api/items '{"kind":"page","title":"[SMOKE] 부모 문서","body":"토큰 재발급 절차"}')
 pid=$(id_of "$parent"); IDS+=("$pid")

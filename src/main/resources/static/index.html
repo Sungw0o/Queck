@@ -43,7 +43,7 @@ button.primary:hover { filter: brightness(1.08) }
 .pad { padding: 4px 10px; margin: 0 }
 
 /* shared glass panel */
-#side, section, #page, dialog {
+#side, section, #page, dialog, .home-hero, #guide {
   background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow);
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
 }
@@ -74,6 +74,73 @@ button.primary:hover { filter: brightness(1.08) }
 main { min-width: 0; padding: 16px 24px }
 .top { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; min-height: 34px }
 .top h1 { font-size: 24px; margin: 0 auto 0 0 }
+
+/* local welcome page */
+#home { max-width: 1180px; margin: 0 auto; padding: 4px 0 28px }
+.home-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px }
+.eyebrow { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .1em }
+.local-badge { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px }
+.local-badge::before { content: ''; width: 6px; height: 6px; background: var(--done); border-radius: 50% }
+.home-hero { border-radius: 24px; padding: clamp(24px, 4vw, 52px); display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; align-items: center; overflow: hidden }
+.home-hero h1 { font-size: clamp(36px, 4.5vw, 64px); line-height: 1.17; letter-spacing: -.055em; margin: 20px 0; font-weight: 800 }
+.home-hero h1 span { color: var(--accent) }
+.home-copy { color: var(--muted); font-size: 15px; line-height: 1.85; max-width: 370px; margin: 0 }
+.home-copy, .home-feature p, .preview-doc p { word-break: keep-all; overflow-wrap: anywhere }
+.home-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px }
+.action { display: inline-flex; justify-content: center; align-items: center; gap: 10px; padding: 11px 19px; border-radius: 999px; font-weight: 600; border: 1px solid var(--line); background: var(--glass-hi) }
+.action:hover { background: var(--hover) }
+.action.primary { background: var(--accent); color: var(--on-accent); border-color: transparent }
+.home-note { font-size: 12px; color: var(--muted); margin: 16px 0 0 }
+.workspace-preview { position: relative; padding: 8px 0 10px }
+.preview-label { font-size: 11px; color: var(--muted); letter-spacing: .04em; margin: 0 0 12px 12px }
+.preview-window { border-radius: 20px; border: 1px solid var(--line); background: var(--glass-hi); padding: 20px; box-shadow: var(--shadow); transform: rotate(-3deg) }
+.preview-top { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); padding-bottom: 18px }
+.preview-top b { color: var(--text); margin-right: auto }
+.preview-top i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); opacity: .45 }
+.preview-key { font: 11px ui-monospace, Consolas, monospace; color: var(--accent) }
+.preview-window h2 { font-size: 19px; margin: 8px 0 18px; letter-spacing: -.03em }
+.preview-doc { background: var(--glass); border: 1px solid var(--line); padding: 13px 15px; border-radius: 14px; margin-top: 8px }
+.preview-doc small { font-size: 11px; color: var(--muted) }
+.preview-doc p { font-size: 12px; margin: 5px 0 0; line-height: 1.7 }
+.preview-doc.agent { margin-left: 24px; background: color-mix(in srgb, var(--accent) 8%, var(--glass-hi)) }
+.mascot-message { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 12px -8px -4px 0; position: relative }
+.mascot-message p { font-size: 12px; border: 1px solid var(--line); background: var(--glass-hi); border-radius: 14px 14px 0 14px; padding: 10px 14px; margin: 0; color: var(--muted) }
+.home-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 32px 0 14px }
+.home-section-title h2 { font-size: 17px; margin: 0; letter-spacing: -.025em }
+.home-section-title a { font-size: 12px; color: var(--muted) }
+.home-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+.home-feature { border: 1px solid var(--line); background: var(--glass); border-radius: 20px; padding: 22px; transition: transform .15s, background .15s }
+.home-feature:hover { transform: translateY(-3px); background: var(--glass-hi) }
+.feature-number { display: flex; justify-content: space-between; color: var(--accent); font: 12px ui-monospace, Consolas, monospace }
+.home-feature h3 { font-size: 16px; margin: 22px 0 8px }
+.home-feature p { font-size: 13px; color: var(--muted); line-height: 1.75; margin: 0 }
+.home-footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 22px 2px 0; color: var(--muted); font-size: 12px }
+.home-footer kbd { font: 11px ui-monospace, Consolas, monospace; border: 1px solid var(--line); background: var(--glass-hi); border-radius: 5px; padding: 2px 5px; margin-right: 4px }
+#guide { max-width: 900px; margin: 0 auto; border-radius: 24px; padding: clamp(22px, 4vw, 40px) }
+.guide-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0 24px }
+.guide-tabs a { border-radius: 999px; padding: 7px 14px; border: 1px solid var(--line) }
+.guide-tabs a[aria-current=page] { background: var(--accent); color: var(--on-accent) }
+#guideDownload { margin-left: auto; font-size: 12px; color: var(--muted) }
+#guideBody > h1:first-child { margin-top: 0 }
+@media (max-width: 1000px) {
+  .home-hero { grid-template-columns: 1fr; gap: 26px }
+  .workspace-preview { max-width: 420px; width: 100%; justify-self: center }
+  .home-hero h1 { font-size: clamp(36px, 6vw, 56px) }
+  .home-copy { max-width: 100% }
+  .home-features { grid-template-columns: 1fr }
+  .home-feature h3 { margin-top: 12px }
+}
+@media (max-width: 680px) {
+  body { grid-template-columns: 1fr; height: auto }
+  #side { height: auto; position: static }
+  main { padding: 12px 4px }
+  .home-header { padding: 0 8px }
+  .home-hero { padding: 26px 22px }
+  .preview-window { transform: none }
+  #page { padding: 22px }
+  .home-footer { padding-inline: 8px }
+}
+@media (prefers-reduced-motion: reduce) { .home-feature { transition: none } .home-feature:hover { transform: none } }
 
 /* board */
 #cols { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 16px; overflow-x: auto }
@@ -139,14 +206,55 @@ dialog textarea:focus { border-color: var(--accent) }
   <input id="q" type="search" placeholder="검색  ( / )" autocomplete="off">
   <div id="results" hidden></div>
   <div id="treeWrap">
+    <a href="#home" id="navHome">홈</a>
     <a href="#board" id="navBoard">보드</a>
+    <a href="#docs" id="navDocs">문서</a>
+    <a href="#guide" id="navGuide">사용 가이드</a>
     <div class="sec"><span>문서</span><button id="newPage" title="새 문서">+</button></div>
     <div id="tree"></div>
   </div>
 </aside>
 
 <main>
-  <div id="board">
+  <div id="home" hidden>
+    <div class="home-header"><span class="eyebrow">QUACK / MY WORKSPACE</span><span class="local-badge">내 PC에만 저장</span></div>
+    <div class="home-hero">
+      <div>
+        <span class="eyebrow">생각을 기록하고, 다음 일을 이어가세요</span>
+        <h1>머릿속의 일을,<br><span>한곳에 차곡차곡.</span></h1>
+        <p class="home-copy">해야 할 일은 보드에, 오래 남길 지식은 문서에.<br>사람은 핵심을 읽고, 에이전트는 맥락을 이어받는<br>나만의 작은 작업 공간입니다.</p>
+        <div class="home-actions"><a class="action primary" href="#board">보드 열기 <span aria-hidden="true">↗</span></a><a class="action" href="#guide">처음이라면, 가이드</a></div>
+        <p class="home-note">가볍게 적어 두세요. 필요할 때 다시 찾을 수 있도록.</p>
+      </div>
+      <div class="workspace-preview">
+        <p class="preview-label">이슈 하나, 두 개의 문서 · 사용 예시</p>
+        <div class="preview-window">
+          <div class="preview-top"><b>오늘의 작은 한 걸음</b><i></i><i></i><i></i></div>
+          <span class="preview-key">QUACK / IDEA → ACTION</span>
+          <h2>흩어진 생각을 작업으로 바꾸기</h2>
+          <div class="preview-doc"><small>사람용 요약</small><p>무엇을 왜 하는지, 언제 끝나는지.<br>필요한 핵심만 짧게 남깁니다.</p></div>
+          <div class="preview-doc agent"><small>에이전트 문서</small><p>결정과 근거 → 검증 결과 → 다음 작업<br>다음 에이전트가 이어갈 맥락을 남깁니다.</p></div>
+        </div>
+        <div class="mascot-message"><p>기억은 내가 맡을게.<br>일단 적어 봐!</p><span id="homeMascot" aria-hidden="true"></span></div>
+      </div>
+    </div>
+    <div class="home-section-title"><h2>기록에서 다음 행동까지</h2><a href="#guide/agent">에이전트와 함께 쓰는 법 ↗</a></div>
+    <div class="home-features">
+      <a class="home-feature" href="#board"><span class="feature-number">01 / DO <span aria-hidden="true">↗</span></span><h3>한눈에, 해야 할 일</h3><p>할 일·진행 중·완료.<br>카드를 옮기며 오늘의 흐름을 정리하세요.</p></a>
+      <a class="home-feature" href="#docs"><span class="feature-number">02 / KEEP <span aria-hidden="true">↗</span></span><h3>차곡차곡, 나의 지식</h3><p>마크다운으로 기록하고 하위 문서로 묶으세요.<br>QK 번호로 작업과 지식을 연결합니다.</p></a>
+      <a class="home-feature" href="#guide/agent"><span class="feature-number">03 / FIND <span aria-hidden="true">↗</span></span><h3>필요할 때, 다시 꺼내기</h3><p>검색으로 기록을 찾고, 연결된 AI에서<br>원문과 출처를 읽어 답을 이어가세요.</p></a>
+    </div>
+    <div class="home-footer"><span>혼자 쓰는 두 번째 뇌. Quack.</span><span><kbd>/</kbd> 검색 &nbsp; <kbd>n</kbd> 새 이슈 &nbsp; · &nbsp; <a href="#guide">사용 가이드 ↗</a></span></div>
+  </div>
+
+  <div id="guide" hidden>
+    <div class="top"><h1>사용 가이드</h1><a href="#home" class="muted">홈으로 ↗</a></div>
+    <p class="muted">처음 기록하는 순간부터, 다음 에이전트에게 작업을 넘길 때까지.</p>
+    <nav class="guide-tabs" aria-label="가이드 종류"><a id="guideHuman" href="#guide">사람용 가이드</a><a id="guideAgent" href="#guide/agent">에이전트 가이드</a><a id="guideDownload" href="/user-guide.md" download>원본 .md 받기 ↓</a></nav>
+    <div id="guideBody" class="md" aria-live="polite"></div>
+  </div>
+
+  <div id="board" hidden>
     <div class="top"><h1>보드</h1><button class="primary" id="newIssue">새 이슈</button></div>
     <div id="cols"></div>
   </div>
@@ -250,6 +358,7 @@ F.prio.innerHTML = options(PRIO);
 F.status.innerHTML = options(COLS);
 marked.use({ breaks: true });
 $('logo').innerHTML = mascot('idle', 26);
+$('homeMascot').innerHTML = mascot('proud', 88);
 $('empty').innerHTML = hey('idle', '문서를 골라라!<br>아니면 <b>+</b> 로 새로 만들든가!', 140);
 document.head.insertAdjacentHTML('beforeend',
   `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(mascot('idle'))}">`);
@@ -259,7 +368,7 @@ let issueSaving = false;
 let issueDoc = 'body';  // selected document; switching does not discard either draft
 let page = null;        // page open in the docs view
 let pages = [];         // all pages, for the tree and breadcrumbs
-let current = 'board';  // hash of the active view, for sidebar highlight
+let current = 'home';   // hash of the active view, for sidebar highlight
 let routed = '';        // location.hash of the view on screen, restored when leaving an unsaved edit is cancelled
 let editNext = false;   // open the next routed page straight in edit mode
 
@@ -288,7 +397,8 @@ async function renderTree() {
       `<li><a href="#docs/${p.id}">${esc(p.title)}</a>${tree(p.id)}</li>`).join('')}</ul>` : '';
   };
   $('tree').innerHTML = tree(null) || '<p class="muted pad">아직 문서가 없어요</p>';
-  for (const a of $('side').querySelectorAll('a')) a.classList.toggle('on', a.getAttribute('href') === '#' + current);
+  for (const a of $('side').querySelectorAll('a')) a.classList.toggle('on',
+    a.getAttribute('href') === '#' + current || (a.id === 'navGuide' && current.startsWith('guide')));
 }
 
 let searchTimer;
@@ -524,21 +634,41 @@ $('pDel').onclick = async () => {
 
 // ---- routing & keys ----
 
+async function renderGuide(agent) {
+  const hash = agent ? 'guide/agent' : 'guide';
+  const file = agent ? '/agent-guide.md' : '/user-guide.md';
+  $('guideHuman').setAttribute('aria-current', agent ? 'false' : 'page');
+  $('guideAgent').setAttribute('aria-current', agent ? 'page' : 'false');
+  $('guideDownload').href = file;
+  $('guideBody').textContent = '가이드를 불러오는 중이에요…';
+  try {
+    const response = await fetch(file);
+    if (!response.ok) throw new Error(response.status);
+    const markdown = await response.text();
+    if (current !== hash) return; // A slower response must not overwrite a different guide.
+    $('guideBody').innerHTML = DOMPurify.sanitize(marked.parse(markdown));
+  } catch {
+    if (current === hash) $('guideBody').textContent = '가이드를 불러오지 못했어요. 잠시 후 다시 열어 주세요.';
+  }
+}
+
 async function route() {
   let [view, id, doc] = location.hash.slice(1).split('/');
+  if (!['home', 'board', 'docs', 'guide', 'issue'].includes(view)) view = 'home';
   if (view === 'issue') {  // search hit on an issue: show the board with it open
     history.replaceState(null, '', '#board');
     view = 'board';
     api('items/' + id).then(i => { edit(i); if (doc === 'agent') showIssueDoc('agent_body') });
   }
-  routed = location.hash || '#board';
+  routed = location.hash || '#home';
   const docs = view === 'docs';
-  current = docs && id ? `docs/${id}` : docs ? 'docs' : 'board';
-  $('board').hidden = docs;
-  $('docs').hidden = !docs;
+  current = docs && id ? `docs/${id}` : view === 'guide' && id === 'agent' ? 'guide/agent' : view;
+  for (const name of ['home', 'board', 'docs', 'guide']) $(name).hidden = name !== view;
+  window.scrollTo(0, 0);
   await renderTree();
   if (docs) { renderDoc(+id || null, editNext); editNext = false }
-  else renderBoard();
+  else if (view === 'board') renderBoard();
+  else if (view === 'guide') renderGuide(id === 'agent');
 }
 
 document.onkeydown = e => {
