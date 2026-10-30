@@ -21,7 +21,6 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 # External accounts. Notion uses OAuth (`codex mcp login notion`); GitHub reads a PAT from GITHUB_PAT. Never put tokens in this file.
-# GitLab joins later as url = "https://<host>/api/v4/mcp". Same servers as .mcp.json.
 [mcp_servers.notion]
 url = "https://mcp.notion.com/mcp"
 
