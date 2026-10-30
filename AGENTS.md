@@ -15,7 +15,7 @@ Dockerfile                gradle:jdk21로 빌드 → temurin 21 jre, -Xmx256m
 build.gradle              Spring Boot 4.1.2 + Spring AI BOM 2.0.2 (두 버전은 짝이 맞아야 함)
 README.md                 사람용 소개, 실행, Claude 연결, 백업. quack 명령이나 연결 방법을 바꾸면 같이 고친다
 quack.bat                 띄우기와 운영 명령 (아래 "실행" 참고)
-.mcp.json                 Claude Code용 MCP 연결 (http://localhost:8765/mcp)
+.mcp.json                 Claude Code용 MCP 연결 (Quack http://localhost:8765/mcp, Notion, GitHub)
 docs/plan.md              개발 계획. 남은 일의 기준
 docs/design.md            디자인 가이드 (토큰, 컴포넌트, 마스코트)
 scripts/smoke.sh          실행 중인 앱에 REST + MCP 스모크 테스트
@@ -84,6 +84,7 @@ src/main/resources/
 - 이슈 문서는 `body`(사람용 요약)와 `agentBody`(에이전트 인수인계)로 나뉜다. `get`으로 최신 문서를 읽고 `expectedRevision`과 필요한 필드만 `update`한다. 다른 버전은 충돌로 거부한다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
 - 연결은 세 군데다. **Claude Code**: `.mcp.json`. **Codex**: `.codex/config.toml`의 `[mcp_servers.quack]`(streamable HTTP를 직접 지원해서 중계가 필요 없다). **Claude Desktop**: 아래. 주소를 바꾸면 셋 다 고친다.
+- 외부 계정 MCP: `.mcp.json`과 `.codex/config.toml`에 Notion(`https://mcp.notion.com/mcp`, OAuth)과 GitHub(`https://api.githubcopilot.com/mcp/`, 환경변수 `GITHUB_PAT`)도 있다. 토큰은 파일에 넣지 않는다. `.mcp.json`의 `${GITHUB_PAT:-}` 기본값을 지우면 변수가 없을 때 Quack 연결까지 설정 파싱이 실패한다. 외부 서비스의 쓰기 도구는 사용자 계정에 바로 반영되므로 승인을 완화하지 않는다.
 - 도구 승인: Codex는 `search`, `get`만 묻지 않고 실행하고 `create`, `update`는 묻는다(`[mcp_servers.quack.tools.<이름>] approval_mode = "approve"`). `codex exec`처럼 비대화형으로 돌리면 승인이 필요한 도구는 실패한다.
 - **Claude Desktop**은 로컬 서버를 stdio로만 붙이므로 `scripts/mcp-bridge.mjs`가 중계한다. 등록 위치는 `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude_desktop_config.json`의 `mcpServers.quack`이다(이 PC는 MSIX 설치라 `%APPDATA%\Claude`가 아니다). 값은 `node.exe` 절대경로와 스크립트 절대경로다. 등록은 `quack desktop`(`scripts/register-desktop.mjs`)으로 한다.
   - **Desktop이 켜져 있을 때 이 파일을 고치면 사라진다.** Desktop이 환경설정을 같은 파일에 쓰면서, 시작할 때 읽어 둔 내용으로 덮어쓴다. 그래서 `quack desktop`은 Desktop이 완전히 꺼질 때까지 기다렸다가 `.bak`을 만들고 `mcpServers.quack`만 병합한다.

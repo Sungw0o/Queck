@@ -87,6 +87,12 @@ Claude Code, Codex, Claude Desktop 세 군데서 쓸 수 있다. 작업 규칙�
 ### Codex
 이 폴더에서 Codex를 열면 `.codex/config.toml`로 연결된다. 처음 열 때 묻는 **프로젝트 신뢰**와 **훅 신뢰**를 허용해야 MCP와 가드가 켜진다. `search`, `get`, `wiki_context`, `history`는 읽기 전용이며 묻지 않고 실행한다. 생성·수정·발행·복원 도구는 기존 승인 정책을 유지한다.
 
+### 외부 계정 (Notion, GitHub)
+Claude Code와 Codex는 이 폴더에서 Notion·GitHub 공식 MCP에도 연결된다. 토큰은 파일에 넣지 않는다.
+- **Notion**: OAuth. Claude Code는 `/mcp`에서 `notion`을 골라 로그인하고, Codex는 `codex mcp login notion`을 실행한다.
+- **GitHub**: [PAT](https://github.com/settings/personal-access-tokens)를 만들어 사용자 환경변수 `GITHUB_PAT`에 넣고 Claude Code·Codex를 다시 연다. 권한은 필요한 저장소와 범위만 준다. 비어 있으면 `github` 서버만 연결에 실패한다.
+- Claude Desktop의 Notion은 Desktop 설정의 커넥터로 붙인다.
+
 ### Claude Desktop
 Desktop은 로컬 서버를 stdio로만 붙이기 때문에 `scripts/mcp-bridge.mjs`가 중간에서 이어 준다.
 
