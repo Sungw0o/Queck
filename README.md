@@ -74,6 +74,7 @@ quack
 | `quack backup` | DB를 `backups/`에 덤프하고 30일 지난 덤프는 정리 |
 | `quack schedule` | 매일 12:00 자동 백업을 작업 스케줄러에 등록 |
 | `quack desktop` | Claude Desktop에 Quack MCP 등록 |
+| `quack global` | 다른 프로젝트 폴더에서도 Quack·Notion·GitHub MCP를 쓰도록 전역 등록 (`--dry-run`은 미리보기만) |
 | `quack smoke` | 실행 중인 앱에 스모크 테스트 |
 
 PowerShell에서는 `.\quack`으로 부른다.
@@ -92,6 +93,12 @@ Claude Code와 Codex는 이 폴더에서 Notion·GitHub 공식 MCP에도 연결�
 - **Notion**: OAuth. Claude Code는 `/mcp`에서 `notion`을 골라 로그인하고, Codex는 `codex mcp login notion`을 실행한다.
 - **GitHub**: [PAT](https://github.com/settings/personal-access-tokens)를 만들어 사용자 환경변수 `GITHUB_PAT`에 넣고 Claude Code·Codex를 다시 연다. 권한은 필요한 저장소와 범위만 준다. 비어 있으면 `github` 서버만 연결에 실패한다.
 - Claude Desktop의 Notion은 Desktop 설정의 커넥터로 붙인다.
+
+### 다른 프로젝트에서 쓰기
+위 연결은 이 폴더에서만 켜진다. 다른 프로젝트 폴더에서도 쓰려면 `quack global --dry-run`으로 추가될 서버를 확인한 뒤 `quack global`을 실행한다.
+- Claude Code는 user 범위(`~/.claude.json`), Codex는 `~/.codex/config.toml`에 이 저장소의 `.mcp.json`·`.codex/config.toml` 내용을 복사한다. Codex 전역 파일은 `.bak`을 남긴다.
+- 이미 같은 이름의 서버가 있으면 건너뛴다. 기존 항목을 덮어쓰거나 지우지 않는다. 설정을 바꾼 뒤 다시 반영하려면 해당 전역 항목을 지우고 다시 실행한다.
+- 가드 훅은 전역으로 옮기지 않는다. 각 프로젝트의 규칙은 그 프로젝트에 둔다.
 
 ### Claude Desktop
 Desktop은 로컬 서버를 stdio로만 붙이기 때문에 `scripts/mcp-bridge.mjs`가 중간에서 이어 준다.

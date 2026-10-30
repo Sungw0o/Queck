@@ -6,6 +6,7 @@ rem   quack db        start only the DB, for running QuackApplication from Intel
 rem   quack backup    dump the DB to backups\quack-YYYYMMDD-HHMM.sql, drop dumps older than 30 days
 rem   quack schedule  register (or update) the daily "Quack backup" task in Task Scheduler
 rem   quack desktop   register Quack in Claude Desktop's MCP config (waits until Desktop is closed)
+rem   quack global    register Quack, Notion, GitHub MCP for every project (Claude Code user scope, ~/.codex); add --dry-run to preview
 rem   quack smoke     run scripts/smoke.sh against the running app
 cd /d "%~dp0"
 if "%~1"=="" goto up
@@ -15,8 +16,9 @@ if /i "%~1"=="db" (docker compose up -d db & exit /b)
 if /i "%~1"=="backup" goto backup
 if /i "%~1"=="schedule" goto schedule
 if /i "%~1"=="desktop" (node scripts\register-desktop.mjs & exit /b)
+if /i "%~1"=="global" (node scripts\register-global.mjs %2 & exit /b)
 if /i "%~1"=="smoke" (bash scripts/smoke.sh & exit /b)
-echo usage: quack [stop^|logs^|db^|backup^|schedule^|desktop^|smoke]
+echo usage: quack [stop^|logs^|db^|backup^|schedule^|desktop^|global^|smoke]
 exit /b 1
 
 :up

@@ -44,7 +44,7 @@ src/main/resources/
 | 전체 (Docker) | `quack` (또는 `quack.bat` 더블클릭) | 앱 http://localhost:8765, MCP http://localhost:8765/mcp |
 | IntelliJ 개발 | `quack db` 후 IntelliJ에서 `QuackApplication` 실행 | 앱 http://localhost:8080, DB localhost:15432 |
 
-`quack.bat` 명령: 인자 없음(빌드하고 띄운 뒤 응답이 오면 브라우저 열기), `stop`, `logs`, `db`, `backup`, `schedule`, `smoke`. 이 폴더에서 cmd는 `quack`, PowerShell은 `.\quack`으로 부른다.
+`quack.bat` 명령: 인자 없음(빌드하고 띄운 뒤 응답이 오면 브라우저 열기), `stop`, `logs`, `db`, `backup`, `schedule`, `desktop`, `global`, `smoke`. 이 폴더에서 cmd는 `quack`, PowerShell은 `.\quack`으로 부른다.
 
 - 컨테이너 이름은 `quack-app`, `quack-db-1`이고 compose 프로젝트 이름은 `quack`이다.
 - **8000, 5432 포트는 이 PC의 다른 프로젝트가 쓰고 있다.** 그래서 8765와 15432를 쓴다. 바꿀 때는 충돌을 먼저 확인할 것.
@@ -86,6 +86,7 @@ src/main/resources/
 - 이슈 문서는 `body`(사람용 요약)와 `agentBody`(에이전트 인수인계)로 나뉜다. `get`으로 최신 문서를 읽고 `expectedRevision`과 필요한 필드만 `update`한다. 다른 버전은 충돌로 거부한다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
 - 연결은 세 군데다. **Claude Code**: `.mcp.json`. **Codex**: `.codex/config.toml`의 `[mcp_servers.quack]`(streamable HTTP를 직접 지원해서 중계가 필요 없다). **Claude Desktop**: 아래. 주소를 바꾸면 셋 다 고친다.
+- 전역 등록: `quack global`(`scripts/register-global.mjs`)이 `.mcp.json`을 Claude Code user 범위로, `.codex/config.toml`의 `mcp_servers.*` 절을 `~/.codex/config.toml`로 복사한다. 없는 서버만 추가하고 기존 항목은 건드리지 않는다. 사용자 전역 설정을 바꾸므로 에이전트가 임의로 실행하지 않는다. 확인은 `--dry-run`으로 한다.
 - 외부 계정 MCP: `.mcp.json`과 `.codex/config.toml`에 Notion(`https://mcp.notion.com/mcp`, OAuth)과 GitHub(`https://api.githubcopilot.com/mcp/`, 환경변수 `GITHUB_PAT`)도 있다. 토큰은 파일에 넣지 않는다. `.mcp.json`의 `${GITHUB_PAT:-}` 기본값을 지우면 변수가 없을 때 Quack 연결까지 설정 파싱이 실패한다. 외부 서비스의 쓰기 도구는 사용자 계정에 바로 반영되므로 승인을 완화하지 않는다.
 - 도구 승인: Codex는 `search`, `get`만 묻지 않고 실행하고 `create`, `update`는 묻는다(`[mcp_servers.quack.tools.<이름>] approval_mode = "approve"`). `codex exec`처럼 비대화형으로 돌리면 승인이 필요한 도구는 실패한다.
 - **Claude Desktop**은 로컬 서버를 stdio로만 붙이므로 `scripts/mcp-bridge.mjs`가 중계한다. 등록 위치는 `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude_desktop_config.json`의 `mcpServers.quack`이다(이 PC는 MSIX 설치라 `%APPDATA%\Claude`가 아니다). 값은 `node.exe` 절대경로와 스크립트 절대경로다. 등록은 `quack desktop`(`scripts/register-desktop.mjs`)으로 한다.
