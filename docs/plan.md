@@ -115,6 +115,12 @@
 
 진행 순서: M4 동시 수정 충돌 감지 → 원본/지식 구분 → 위키 정리 절차 → 검색 발췌·품질 검사 → 연결·점검. PDF 추출·웹 본문 자동 수집·임베딩은 첫 버전에 넣지 않고 실제 자료와 검색 실패를 보고 범위를 정한다.
 
+## M7. MCP 작업 프롬프트
+- [ ] 진행 중
+- 배경: 원본 정리, Notion 가져오기, GitHub 회고는 매번 같은 절차를 길게 설명해야 한다. Notion·GitHub MCP는 연결해 두었다(`795a5af`).
+- 범위: MCP Prompts 3개(`organize_source`, `import_notion`, `github_retro`). 앱은 절차 문장만 돌려주고 외부 서비스를 직접 부르지 않는다. 읽기·쓰기는 Claude가 기존 도구와 승인 정책으로 한다.
+- 완료 조건: `prompts/list`에 3개가 보이고, `prompts/get`이 인자를 넣은 사용자 메시지를 돌려준다. 도구 10개는 그대로다.
+
 ## 대기 (사용자 입력 필요)
 - README 캡처: `docs/images/`에 `board.png`, `docs.png`, `claude-search.png`, `dark.png`를 넣고 README의 "캡처 예정" 자리를 이미지로 바꾼다. 실제 데이터가 보이면 안 되는 내용은 가린다.
 - Claude Desktop 등록: Desktop 밖의 터미널에서 `quack desktop` → 트레이에서 종료 → 다시 켜기. 그 뒤 M3 항목의 완료 조건을 확인한다.

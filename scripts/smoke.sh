@@ -78,6 +78,12 @@ for t in search get create update ingest_source publish_wiki wiki_context histor
 [ "$(grep -o '"inputSchema"' <<<"$tools" | wc -l)" = 10 ] || fail "MCP should expose exactly 10 tools: $tools"
 ok "MCP 10 tools"
 
+prompts=$(mcp '{"jsonrpc":"2.0","id":3,"method":"prompts/list"}')
+for p in organize_source import_notion github_retro; do grep -q "\"name\":\"$p\"" <<<"$prompts" || fail "MCP prompt $p missing: $prompts"; done
+got=$(mcp '{"jsonrpc":"2.0","id":4,"method":"prompts/get","params":{"name":"github_retro","arguments":{"target":"octo/repo#7"}}}')
+grep -q '"role":"user"' <<<"$got" && grep -q 'octo/repo#7' <<<"$got" && grep -q 'publish_wiki' <<<"$got" || fail "prompts/get github_retro: $got"
+ok "MCP 3 prompts"
+
 # Claude Desktop reaches the same tools through the stdio bridge
 if command -v node > /dev/null; then
   node "$(dirname "$0")/rag-smoke.mjs" "$BASE"

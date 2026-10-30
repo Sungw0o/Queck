@@ -31,6 +31,16 @@ Claude Desktop은 프로젝트의 Node 중계 스크립트를 통해 연결합�
 
 Codex 연결에서는 검색·조회는 바로 실행하고, 생성·수정은 승인을 받도록 설정돼 있습니다. MCP 삭제 도구는 없습니다.
 
+작업 절차는 MCP 프롬프트로도 받을 수 있습니다. 앱은 절차 문장만 돌려주고, 실제 읽기·쓰기는 위 도구와 같은 승인 정책을 따릅니다.
+
+| 프롬프트 | 용도 |
+|---|---|
+| `organize_source(id?)` | 원본을 출처가 달린 위키로 정리. id가 없으면 원본 목록에서 고르게 함 |
+| `import_notion(page)` | Notion MCP로 읽은 페이지를 고치지 않고 원본 저장 |
+| `github_retro(target)` | GitHub PR·이슈를 원본으로 저장하고 결정·교훈을 위키로 정리. GitHub에는 쓰지 않음 |
+
+Claude Code에서는 `/mcp__quack__organize_source 12`처럼 부릅니다.
+
 이슈 상태는 `todo`·`doing`·`done`, 우선순위는 `high`·`mid`·`low`입니다. 위키의 `kind`는 `page`, 이슈는 `issue`입니다.
 
 ## 3. 검색 → 원문 → 근거와 출처

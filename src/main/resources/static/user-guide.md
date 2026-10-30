@@ -66,6 +66,8 @@ Claude 또는 Codex에 Quack MCP가 연결돼 있다면 이렇게 요청할 수 
 
 > Quack에서 토큰 재발급 관련 기록을 찾고, 에이전트 문서까지 읽어서 현재 상태와 다음 작업을 출처와 함께 알려줘.
 
+자주 하는 정리는 Claude Code에서 `/mcp__quack__organize_source`(원본 정리), `/mcp__quack__import_notion`(Notion 가져오기), `/mcp__quack__github_retro`(GitHub 회고)로 바로 부를 수 있습니다.
+
 AI는 Quack에서 **검색 → 원문 조회 → 출처가 있는 답변** 순서로 기록을 사용합니다. Quack 화면 안에 채팅창은 없으며, 앱이 직접 AI를 호출하거나 문서를 자동 요약하지 않습니다. 연결과 인수인계 방법은 [에이전트 가이드](#guide/agent)에 있습니다.
 
 ## 6. 원본을 모으고 지식 위키로 정리하세요

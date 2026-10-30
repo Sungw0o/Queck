@@ -82,7 +82,7 @@ PowerShell에서는 `.\quack`으로 부른다.
 Claude Code, Codex, Claude Desktop 세 군데서 쓸 수 있다. 작업 규칙은 셋 다 [AGENTS.md](AGENTS.md)를 따른다.
 
 ### Claude Code
-이 폴더에서 Claude Code를 열면 `.mcp.json`으로 자동 연결된다. 처음 한 번만 `quack` 서버 사용을 승인하면 된다.
+이 폴더에서 Claude Code를 열면 `.mcp.json`으로 자동 연결된다. 처음 한 번만 `quack` 서버 사용을 승인하면 된다. 자주 하는 작업은 `/mcp__quack__organize_source`(원본 정리), `/mcp__quack__import_notion`(Notion 가져오기), `/mcp__quack__github_retro`(GitHub 회고) 프롬프트로 부른다.
 
 ### Codex
 이 폴더에서 Codex를 열면 `.codex/config.toml`로 연결된다. 처음 열 때 묻는 **프로젝트 신뢰**와 **훅 신뢰**를 허용해야 MCP와 가드가 켜진다. `search`, `get`, `wiki_context`, `history`는 읽기 전용이며 묻지 않고 실행한다. 생성·수정·발행·복원 도구는 기존 승인 정책을 유지한다.
@@ -137,7 +137,7 @@ AGENTS.md                 작업 지시서 (에이전트와 사람 공용)
   ```
 - 커밋 제목은 `<gitmoji> <type>: <요약>` 형식이다. 예: `✨ feat: 문서의 QK 번호를 링크로`
 - push하면 GitHub Actions가 compose로 앱을 띄우고 `scripts/smoke.sh`를 돌린다.
-- 스모크는 REST/MCP 10개 도구·충돌·이력·위키 발행과 고정된 검색 평가 10문항을 검사한다. `node scripts/rag-eval.mjs`로 검색 평가만 반복할 수 있다. 이는 검색 근거 평가이며 LLM 답변의 사실성을 측정하지 않는다.
+- 스모크는 REST/MCP 10개 도구·3개 프롬프트·충돌·이력·위키 발행과 고정된 검색 평가 10문항을 검사한다. `node scripts/rag-eval.mjs`로 검색 평가만 반복할 수 있다. 이는 검색 근거 평가이며 LLM 답변의 사실성을 측정하지 않는다.
 
 ## 참고
 마스코트는 칸쵸메(금색의 갓슈)를 따라 그린 개인용 팬아트다. 공개 배포나 홍보에 쓰지 않는다.

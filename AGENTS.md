@@ -30,6 +30,7 @@ src/main/java/quack/
   ItemRepository.java     JdbcClient + SQL 전부 (JPA 안 씀). Item / Hit record
   ItemController.java     REST /api/**
   ItemTools.java          MCP 도구 10개: 검색/읽기/쓰기 + 원본·위키 발행·문맥·이력·복원·지식화
+  ItemPrompts.java        MCP 프롬프트 3개: 원본 정리, Notion 가져오기, GitHub 회고 (절차 문장만 반환)
   MarkdownController.java 텍스트/마크다운 가져오기, 개별 Markdown·전체 ZIP 내보내기
 src/main/resources/
   application.yml         DB, Jackson SNAKE_CASE, MCP(STREAMABLE), 정적 파일 no-cache
@@ -80,6 +81,7 @@ src/main/resources/
 ## MCP
 - Spring AI `spring-ai-starter-mcp-server-webmvc`, streamable HTTP 방식, 엔드포인트는 `/mcp`.
 - 도구는 `ItemTools`의 `@Tool` 메서드다. **도구 설명(description)은 Claude가 읽는 프롬프트**이므로 동작을 바꾸면 설명도 같이 고칠 것.
+- 프롬프트는 `ItemPrompts`의 `@McpPrompt` 메서드다(어노테이션 스캐너가 자동 등록). `PromptMessage`를 `Role.USER`로 돌려준다. 문자열을 그대로 반환하면 Spring AI가 assistant 메시지로 감싸므로 쓰지 않는다. 프롬프트 문장도 Claude가 읽는 지시이므로 절차·도구를 바꾸면 같이 고친다.
 - **MCP 응답 JSON은 camelCase**(`parentId`)다. REST는 snake_case다. Spring AI가 자체 매퍼를 쓰기 때문이고, 의도된 차이다.
 - 이슈 문서는 `body`(사람용 요약)와 `agentBody`(에이전트 인수인계)로 나뉜다. `get`으로 최신 문서를 읽고 `expectedRevision`과 필요한 필드만 `update`한다. 다른 버전은 충돌로 거부한다.
 - MCP에는 삭제 도구가 없다. 추가하면 Claude가 사용자 데이터를 지울 수 있게 되므로, 넣기 전에 사용자와 상의한다.
@@ -112,7 +114,7 @@ src/main/resources/
 - **마스코트**: `mascot(mood, size)`와 `hey(mood, 대사)`. 표정과 대사 톤은 `docs/design.md`에 있다. 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**라서 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
 
 ## 검증 방법 (작업 후 반드시)
-1. `docker compose up -d --build app` → `docker logs quack-app`에서 `Started QuackApplication`와 `Registered tools: 10`를 확인한다.
+1. `docker compose up -d --build app` → `docker logs quack-app`에서 `Started QuackApplication`, `Registered tools: 10`, `Registered prompts: 3`을 확인한다.
 2. `bash scripts/smoke.sh` (또는 `quack smoke`): REST 생성·수정·한글 검색·404·cascade 삭제와 MCP `tools/list`를 확인하고, 만든 `[SMOKE]` 데이터는 실패해도 지운다. API나 MCP 동작을 바꾸면 이 스크립트도 같이 고친다.
    - **Windows Git Bash에서 curl 인자에 한글을 넣으면 깨진다.** 본문은 파일로 만들어 `--data-binary @file`로 보낸다(스크립트가 이미 그렇게 한다).
    - MCP를 손으로 부를 때: `initialize` → `Mcp-Session-Id` 헤더 → `notifications/initialized` → `tools/list`/`tools/call`. 헤더 `Accept: application/json, text/event-stream`이 필요하다.
