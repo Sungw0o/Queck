@@ -24,8 +24,9 @@ public class ItemTools {
             Searches titles, human summaries (body) and agent handoff documents (agentBody).
             Substring match on space-separated terms, ranked by hits; this is not semantic/vector search.
             Korean text: use short stems without particles ('로그인' not '로그인을') and try synonyms if results are thin.
-            Empty query lists recent items. Returns match-centered snippets, UTF-16 offset, nearest heading,
-            pageType, needsReview, source ('title', 'body', 'agent_body') and a relative url.
+            Empty query lists recent items. project limits results to one project (e.g. the repo you work in);
+            omit it to search everything. Returns match-centered snippets, UTF-16 offset, nearest heading,
+            pageType, project, needsReview, source ('title', 'body', 'agent_body') and a relative url.
             needsReview means sources or content changed: verify originals before making current claims.
             Always call get(id) before answering; snippets may be incomplete. Cite the item title/key, document type
             and http://localhost:8765 plus the returned url (e.g. /#issue/12). Issue QK-12 has id 12.
@@ -33,8 +34,9 @@ public class ItemTools {
     public List<Hit> search(@ToolParam(description = "space-separated keywords") String query,
                             @ToolParam(required = false, description = "'issue' or 'page' to filter") String kind,
                             @ToolParam(required = false, description = "max results, default 10") Integer limit,
-                            @ToolParam(required = false, description = "'note', 'source' or 'wiki' to filter page type") String pageType) {
-        return repo.search(query, kind, limit != null ? limit : 10, pageType);
+                            @ToolParam(required = false, description = "'note', 'source' or 'wiki' to filter page type") String pageType,
+                            @ToolParam(required = false, description = "project name to filter, e.g. 'quack'") String project) {
+        return repo.search(query, kind, limit != null ? limit : 10, pageType, project);
     }
 
     @Tool(description = """
@@ -54,14 +56,17 @@ public class ItemTools {
             acceptance criteria, decisions, progress, verification, blockers, next steps and source links.
             Record only confirmed facts; do not invent completed work. Do not store secrets.
             Issues: status 'todo'|'doing'|'done' (default todo), prio 'high'|'mid'|'low' (default mid).
-            Pages: parentId = id of the parent page to nest it, or omit for a top-level page.""")
+            Pages: parentId = id of the parent page to nest it, or omit for a top-level page.
+            project groups items by project (lower-case letters, digits, '.', '-', '_'; max 50). Use the name the
+            project's own instructions give, usually the repo folder name; omit for items that belong to no project.""")
     public Item create(String kind, String title,
                        @ToolParam(required = false) String body,
                        @ToolParam(required = false, description = "issue agent handoff markdown") String agentBody,
                        @ToolParam(required = false) String status,
                        @ToolParam(required = false) String prio,
-                       @ToolParam(required = false) Long parentId) {
-        return repo.create(kind, title, body, agentBody, status, prio, parentId, "note", null);
+                       @ToolParam(required = false) Long parentId,
+                       @ToolParam(required = false, description = "project name, e.g. 'quack'") String project) {
+        return repo.create(kind, title, body, agentBody, status, prio, parentId, "note", null, project);
     }
 
     @Tool(description = """
@@ -75,7 +80,8 @@ public class ItemTools {
                        @ToolParam(required = false) String body,
                        @ToolParam(required = false, description = "issue agent handoff markdown") String agentBody,
                        @ToolParam(required = false) String status,
-                       @ToolParam(required = false) String prio) {
+                       @ToolParam(required = false) String prio,
+                       @ToolParam(required = false, description = "project name; empty string removes the project") String project) {
         var fields = new HashMap<String, Object>();
         Item current = repo.get(id).orElseThrow();
         if (!"note".equals(current.pageType())) throw new IllegalArgumentException("원본은 화면에서 수정하고, 지식 위키는 publish_wiki로 발행하세요.");
@@ -85,6 +91,7 @@ public class ItemTools {
         if (agentBody != null) fields.put("agent_body", agentBody);
         if (status != null) fields.put("status", status);
         if (prio != null) fields.put("prio", prio);
+        if (project != null) fields.put("project", project);
         return repo.update(id, fields).orElse(null);
     }
 

@@ -121,6 +121,13 @@
 - 범위: MCP Prompts 3개(`organize_source`, `import_notion`, `github_retro`). 앱은 절차 문장만 돌려주고 외부 서비스를 직접 부르지 않는다. 읽기·쓰기는 Claude가 기존 도구와 승인 정책으로 한다.
 - 완료 조건: `prompts/list`에 3개가 보이고, `prompts/get`이 인자를 넣은 사용자 메시지를 돌려준다. 도구 10개는 그대로다.
 
+## M8. 프로젝트 구분
+- [ ] 진행 중
+- 배경: 프로젝트를 계속 늘려 가는데 모든 이슈가 한 보드에 섞인다. 프로젝트 A의 에이전트가 A의 이슈만 골라 읽을 수 없다.
+- 범위: `items.project`(빈 문자열 = 없음). 소문자·앞뒤 공백 제거, 50자 이하의 글자·숫자·`.-_`만. REST 생성·수정과 검색 필터, MCP `search`·`create`·`update`의 `project`, 보드 프로젝트 필터와 이슈 다이얼로그 입력, Markdown 내보내기 표시. 기존 DB는 `schema.sql`의 `ADD COLUMN IF NOT EXISTS`로 기동 때 붙는다(백업 먼저).
+- 제외: 문서 트리·사이드바 검색의 프로젝트 필터, 프로젝트 목록 도구, 상태 필터. 실제로 필요해지면 추가한다.
+- 완료 조건: 프로젝트를 지정한 이슈를 그 프로젝트로 검색하면 나오고 다른 프로젝트로는 안 나온다. 보드에서 프로젝트별로 볼 수 있다. 기존 데이터는 그대로다.
+
 ## 대기 (사용자 입력 필요)
 - README 캡처: `docs/images/`에 `board.png`, `docs.png`, `claude-search.png`, `dark.png`를 넣고 README의 "캡처 예정" 자리를 이미지로 바꾼다. 실제 데이터가 보이면 안 되는 내용은 가린다.
 - Claude Desktop 등록: Desktop 밖의 터미널에서 `quack desktop` → 트레이에서 종료 → 다시 켜기. 그 뒤 M3 항목의 완료 조건을 확인한다.

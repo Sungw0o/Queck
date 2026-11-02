@@ -19,18 +19,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class ItemRepository {
     public record Item(long id, String kind, String title, String body, String agentBody, String status, String prio,
                        Long parentId, OffsetDateTime createdAt, OffsetDateTime updatedAt,
-                       int revision, String pageType, String sourceUrl, boolean needsReview) {}
+                       int revision, String pageType, String sourceUrl, boolean needsReview, String project) {}
     public record Hit(long id, String kind, String title, String status, String snippet, String source, String url,
-                      OffsetDateTime updatedAt, long score, int offset, String heading, String pageType, boolean needsReview) {}
+                      OffsetDateTime updatedAt, long score, int offset, String heading, String pageType, boolean needsReview, String project) {}
     record Candidate(long id, String kind, String title, String status, String text, String source, String url,
-                     OffsetDateTime updatedAt, long score, String pageType, boolean needsReview) {}
+                     OffsetDateTime updatedAt, long score, String pageType, boolean needsReview, String project) {}
     public record Revision(long itemId, int revision, String title, String body, String agentBody, String status, String prio, String sourceUrl, OffsetDateTime savedAt) {}
     public record SourceRef(long id, int revision) {}
     public record IngestResult(Item item, boolean duplicate) {}
     public record Link(long id, String title, String kind, String pageType, int revision, int linkedRevision, String relation) {}
     public record Event(long id, Long itemId, Long sourceId, String title, String action, String detail, OffsetDateTime createdAt) {}
     public record Finding(String type, long itemId, String title, String detail) {}
-    private static final Set<String> FIELDS = Set.of("title", "body", "agent_body", "status", "prio", "parent_id", "source_url");
+    private static final Set<String> FIELDS = Set.of("title", "body", "agent_body", "status", "prio", "parent_id", "source_url", "project");
+    private static final Pattern PROJECT = Pattern.compile("[\\p{L}\\p{N}._-]{0,50}");
     private static final Pattern MENTION = Pattern.compile("#(?:docs|issue)/(\\d+)");
     private static final String REVIEW = """
             (i.page_type = 'wiki' AND (
@@ -65,6 +66,12 @@ public class ItemRepository {
     }
     private static String title(String value) {
         require(value != null && !value.isBlank() && value.length() <= 300, "제목은 1~300자로 입력해 주세요."); return value.trim();
+    }
+    /** Lower-case slug so "Quack" and " quack " are one project; '' means none. */
+    private static String project(Object value) {
+        require(value == null || value instanceof String, "프로젝트 형식을 확인해 주세요.");
+        String result = value == null ? "" : ((String) value).strip().toLowerCase(Locale.ROOT);
+        require(PROJECT.matcher(result).matches(), "프로젝트는 50자 이하의 글자·숫자·.-_로 입력해 주세요."); return result;
     }
     private static String hash(String value) {
         try {
@@ -124,13 +131,13 @@ public class ItemRepository {
 
     @Transactional
     public Item create(String kind, String title, String body, String agentBody, String status, String prio, Long parentId,
-                       String pageType, String sourceUrl) {
+                       String pageType, String sourceUrl, String project) {
         require(Set.of("issue", "page").contains(kind == null ? "" : kind), "종류는 issue 또는 page여야 합니다.");
         String role = pageType == null ? "note" : pageType;
         require(Set.of("note", "source", "wiki").contains(role), "문서 유형을 확인해 주세요.");
         require("page".equals(kind) || "note".equals(role), "원본·위키 유형은 문서에서만 사용합니다.");
         if ("source".equals(role)) return ingest(title, body, sourceUrl).item();
-        String cleanTitle = title(title), cleanBody = text(body), cleanAgent = text(agentBody);
+        String cleanTitle = title(title), cleanBody = text(body), cleanAgent = text(agentBody), cleanProject = project(project);
         if ("issue".equals(kind)) {
             status = status == null ? "todo" : status; prio = prio == null ? "mid" : prio;
             require(Set.of("todo", "doing", "done").contains(status), "상태를 확인해 주세요.");
@@ -139,10 +146,10 @@ public class ItemRepository {
         }
         parent(parentId, null);
         var inserted = jdbc.sql("""
-                INSERT INTO items(kind,title,body,agent_body,status,prio,parent_id,page_type)
-                VALUES (:k,:t,:b,:a,:s,:p,:parent,:role) ON CONFLICT DO NOTHING RETURNING id""")
+                INSERT INTO items(kind,title,body,agent_body,status,prio,parent_id,page_type,project)
+                VALUES (:k,:t,:b,:a,:s,:p,:parent,:role,:proj) ON CONFLICT DO NOTHING RETURNING id""")
                 .param("k", kind).param("t", cleanTitle).param("b", cleanBody).param("a", cleanAgent)
-                .param("s", status).param("p", prio).param("parent", parentId).param("role", role).query(Long.class).optional();
+                .param("s", status).param("p", prio).param("parent", parentId).param("role", role).param("proj", cleanProject).query(Long.class).optional();
         long id = inserted.orElseThrow(() -> error(HttpStatus.CONFLICT, "같은 제목의 지식 위키가 있습니다. 기존 문서를 읽고 갱신해 주세요."));
         snapshot(id); Item item = get(id).orElseThrow(); mentions(item); return item;
     }
@@ -181,6 +188,7 @@ public class ItemRepository {
         if (values.containsKey("title")) values.put("title", title((String) values.get("title")));
         for (String field : List.of("body", "agent_body")) if (values.containsKey(field)) values.put(field, text((String) values.get(field)));
         if (values.containsKey("status")) require(values.get("status") instanceof String s && Set.of("todo","doing","done").contains(s), "상태를 확인해 주세요.");
+        if (values.containsKey("project")) values.put("project", project(values.get("project")));
         if (values.containsKey("prio")) require(values.get("prio") instanceof String s && Set.of("high","mid","low").contains(s), "우선순위를 확인해 주세요.");
         if (values.containsKey("parent_id")) {
             require("page".equals(before.kind()), "이슈에는 상위 문서를 지정할 수 없습니다.");
@@ -248,7 +256,7 @@ public class ItemRepository {
             Item original = lock(source.id()); require("source".equals(original.pageType()), "출처는 원본 자료여야 합니다.");
             version(original, source.revision()); originals.add(original);
         }
-        Item wiki = id == null ? create("page", title, body, "", null, null, null, "wiki", null)
+        Item wiki = id == null ? create("page", title, body, "", null, null, null, "wiki", null, null)
                 : update(id, Map.of("title", title(title), "body", text(body), "expected_revision", expected)).orElseThrow();
         jdbc.sql("DELETE FROM item_links WHERE from_id = :id AND relation IN ('source','related')").param("id", wiki.id()).update();
         for (Item original : originals) { link(wiki.id(), original.id(), "source", original.revision()); event(wiki.id(), original.id(), "compile", summary); }
@@ -325,8 +333,8 @@ public class ItemRepository {
         jdbc.sql("DELETE FROM items WHERE id = :id").param("id", id).update();
     }
 
-    public List<Hit> search(String query, String kind, int limit) { return search(query, kind, limit, null); }
-    public List<Hit> search(String query, String kind, int limit, String pageType) {
+    public List<Hit> search(String query, String kind, int limit, String pageType, String project) {
+        String projectFilter = project == null || project.isBlank() ? null : project(project);
         String[] words = Arrays.stream((query == null ? "" : query).trim().split("\\s+")).filter(t -> !t.isEmpty()).distinct().toArray(String[]::new);
         require(words.length <= 20, "검색어는 20개 이하로 입력해 주세요.");
         String patterns = Arrays.stream(words).map(t -> "%" + t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%").collect(Collectors.joining("\n"));
@@ -340,14 +348,15 @@ public class ItemRepository {
                 """ + REVIEW + """
                     AS needs_review FROM items i
                   WHERE (CAST(:k AS text) IS NULL OR i.kind = :k) AND (CAST(:role AS text) IS NULL OR i.page_type = :role)
+                    AND (CAST(:proj AS text) IS NULL OR i.project = :proj)
                 )
                 SELECT id,kind,title,status, CASE WHEN body_hits = 0 AND agent_hits > 0 THEN agent_body ELSE body END AS text,
                   CASE WHEN body_hits > 0 THEN 'body' WHEN agent_hits > 0 THEN 'agent_body' ELSE 'title' END AS source,
                   CASE WHEN kind = 'issue' THEN '#issue/' ELSE '#docs/' END || id
                     || CASE WHEN kind = 'issue' AND body_hits = 0 AND agent_hits > 0 THEN '/agent' ELSE '' END AS url,
-                  updated_at, title_hits * 2 + body_hits + agent_hits AS score, page_type,needs_review
+                  updated_at, title_hits * 2 + body_hits + agent_hits AS score, page_type,needs_review,project
                 FROM hits WHERE title_hits + body_hits + agent_hits > 0 ORDER BY score DESC,updated_at DESC LIMIT :n""")
-                .param("t", patterns.isEmpty() ? "%" : patterns).param("k", kind).param("role", pageType)
+                .param("t", patterns.isEmpty() ? "%" : patterns).param("k", kind).param("role", pageType).param("proj", projectFilter)
                 .param("n", Math.max(1, Math.min(limit, 20))).query(Candidate.class).list();
         return rows.stream().map(row -> {
             String body = row.text();
@@ -358,7 +367,7 @@ public class ItemRepository {
             String snippet = (start > 0 ? "…" : "") + body.substring(start, end) + (end < body.length() ? "…" : "");
             String heading = ""; var headings = Pattern.compile("(?m)^#{1,6} (.+)$").matcher(body);
             while (headings.find() && headings.start() <= match) heading = headings.group(1);
-            return new Hit(row.id(),row.kind(),row.title(),row.status(),snippet,row.source(),row.url(),row.updatedAt(),row.score(),start,heading,row.pageType(),row.needsReview());
+            return new Hit(row.id(),row.kind(),row.title(),row.status(),snippet,row.source(),row.url(),row.updatedAt(),row.score(),start,heading,row.pageType(),row.needsReview(),row.project());
         }).toList();
     }
 }

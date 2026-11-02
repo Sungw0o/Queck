@@ -50,6 +50,17 @@ patched=$(send PATCH "/api/items/$iid" '{"status":"doing","expected_revision":1}
 grep -q '"status":"doing"' <<<"$patched" && grep -q '"title":"\[SMOKE\] issue"' <<<"$patched" || fail "patch: $patched"
 ok "patch changes only sent keys"
 
+proj=$(send POST /api/items '{"kind":"issue","title":"[SMOKE] project issue","project":" Smoke-Proj "}')
+jid=$(id_of "$proj"); IDS+=("$jid")
+grep -q '"project":"smoke-proj"' <<<"$proj" || fail "project not normalized: $proj"
+in_proj=$(curl -sf "$BASE/api/search?kind=issue&project=smoke-proj")
+grep -q "\"id\":$jid" <<<"$in_proj" && ! grep -q "\"id\":$iid," <<<"$in_proj" || fail "project filter: $in_proj"
+grep -q "\"id\":$jid" <<<"$(curl -sf "$BASE/api/search?kind=issue&project=other-proj")" && fail "other project returned $jid"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X PATCH "$BASE/api/items/$jid" -H 'Content-Type: application/json' -d '{"project":"a b","expected_revision":1}')" = 400 ] || fail "invalid project accepted"
+cleared=$(send PATCH "/api/items/$jid" '{"project":"","expected_revision":1}')
+grep -q '"project":""' <<<"$cleared" || fail "project not cleared: $cleared"
+ok "project normalize, filter, validate, clear"
+
 printf '재발급' > "$TMP/q.txt"
 hits=$(cd "$TMP" && curl -sf -G "$BASE/api/search" --data-urlencode "q@q.txt")  # relative: Windows curl can't read /tmp paths here
 grep -q "\"id\":$pid" <<<"$hits" || fail "korean search missed page $pid: $hits"

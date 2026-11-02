@@ -20,10 +20,10 @@ Claude Desktop은 프로젝트의 Node 중계 스크립트를 통해 연결합�
 
 | 도구 | 용도 |
 |---|---|
-| `search(query, kind?, limit?, pageType?)` | 제목·본문·에이전트 문서를 키워드로 검색. 최대 20개. pageType은 note/source/wiki |
+| `search(query, kind?, limit?, pageType?, project?)` | 제목·본문·에이전트 문서를 키워드로 검색. 최대 20개. pageType은 note/source/wiki, project는 그 프로젝트만 |
 | `get(id)` | 이슈 또는 위키의 전체 원문 조회 |
-| `create(kind, title, body?, agentBody?, status?, prio?, parentId?)` | 새 이슈 또는 일반 메모 작성 |
-| `update(id, expectedRevision, title?, body?, agentBody?, status?, prio?)` | 읽은 버전이 일치할 때 이슈·일반 메모 수정 |
+| `create(kind, title, body?, agentBody?, status?, prio?, parentId?, project?)` | 새 이슈 또는 일반 메모 작성 |
+| `update(id, expectedRevision, title?, body?, agentBody?, status?, prio?, project?)` | 읽은 버전이 일치할 때 이슈·일반 메모 수정. project 빈 문자열은 프로젝트 해제 |
 | `ingest_source(title, body, sourceUrl?)` | 원문 보존·정규화한 내용의 중복 감지 |
 | `publish_wiki(id?, expectedRevision?, title, body, sources, relatedIds?, summary)` | 출처 버전을 검사하고 위키·연결·로그를 한 번에 발행 |
 | `wiki_context(view, id?)` | index / sources / links / check / log 조회 |
@@ -42,6 +42,8 @@ Codex 연결에서는 검색·조회는 바로 실행하고, 생성·수정은 �
 | `github_retro(target)` | GitHub PR·이슈를 원본으로 저장하고 결정·교훈을 위키로 정리. GitHub에는 쓰지 않음 |
 
 Claude Code에서는 `/mcp__quack__organize_source 12`처럼 부릅니다.
+
+다른 프로젝트 저장소에서 일할 때는 그 저장소의 지시서(AGENTS.md 등)가 알려 주는 프로젝트 이름으로 `search(query: "", kind: "issue", project: "이름")`를 불러 그 프로젝트의 이슈만 읽고, 새 이슈를 만들 때도 같은 `project`를 넣습니다. 이름은 소문자로 저장되며 보통 저장소 폴더 이름입니다.
 
 이슈 상태는 `todo`·`doing`·`done`, 우선순위는 `high`·`mid`·`low`입니다. 위키의 `kind`는 `page`, 이슈는 `issue`입니다.
 

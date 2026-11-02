@@ -13,7 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api")
 class ItemController {
 
-    record NewItem(String kind, String title, String body, String agentBody, String status, String prio, Long parentId, String pageType, String sourceUrl) {}
+    record NewItem(String kind, String title, String body, String agentBody, String status, String prio, Long parentId, String pageType, String sourceUrl, String project) {}
     record Source(String title, String body, String sourceUrl) {}
     record Restore(int revision, Integer expectedRevision) {}
     record Expected(Integer expectedRevision) {}
@@ -31,8 +31,9 @@ class ItemController {
     }
 
     @GetMapping("/search")
-    List<Hit> search(@RequestParam(defaultValue = "") String q, @RequestParam(required = false) String kind, @RequestParam(required = false) String page_type) {
-        return repo.search(q, kind, 20, page_type);
+    List<Hit> search(@RequestParam(defaultValue = "") String q, @RequestParam(required = false) String kind, @RequestParam(required = false) String page_type,
+                    @RequestParam(required = false) String project) {
+        return repo.search(q, kind, 20, page_type, project);
     }
 
     @GetMapping("/items/{id}")
@@ -42,7 +43,7 @@ class ItemController {
 
     @PostMapping("/items")
     Item create(@RequestBody NewItem i) {
-        return repo.create(i.kind(), i.title(), i.body(), i.agentBody(), i.status(), i.prio(), i.parentId(), i.pageType(), i.sourceUrl());
+        return repo.create(i.kind(), i.title(), i.body(), i.agentBody(), i.status(), i.prio(), i.parentId(), i.pageType(), i.sourceUrl(), i.project());
     }
 
     @PatchMapping("/items/{id}")

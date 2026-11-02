@@ -62,18 +62,19 @@ src/main/resources/
 - `body`: 마크다운
 - `agent_body`: 이슈의 에이전트 인수인계 마크다운(기본 빈 문자열). `body`는 사람이 읽는 짧은 요약으로 유지한다. 위키는 기존 `body`를 쓴다.
 - `created_at`, `updated_at`: 보드는 `updated_at` 순으로 정렬한다. 그래서 상태를 바꾼 카드는 그 컬럼 맨 아래로 간다.
+- `project`: 프로젝트 이름(빈 문자열 = 없음). 저장할 때 앞뒤 공백을 지우고 소문자로 바꾸며, 50자 이하의 글자·숫자·`.-_`만 받는다. 보통 그 프로젝트 저장소 폴더 이름을 쓴다. 보드 필터와 검색 필터에 쓴다.
 - 화면의 이슈 키는 `QK-{id}`다. DB에 따로 저장하지 않고 id로 표시만 한다.
-- **마이그레이션 도구가 없다.** 스키마를 바꾸면 `schema.sql`은 새 DB에만 적용되니까, 기존 DB에는 `ALTER`를 직접 실행해야 한다. 컬럼을 추가하면 Item record, `FIELDS` 화이트리스트, 프론트를 함께 고칠 것.
+- **마이그레이션 도구가 없다.** `CREATE TABLE IF NOT EXISTS`는 기존 DB에 새 컬럼을 붙이지 않는다. 단순 컬럼 추가는 `schema.sql`에 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`로 넣어 기동 때 적용한다(`project`가 이 방식). 데이터를 옮기거나 바꿔야 하는 변경은 백업 후 별도 SQL을 직접 실행한다. 컬럼을 추가하면 Item record, `FIELDS` 화이트리스트, 프론트를 함께 고칠 것.
 
 ## API (REST, JSON은 snake_case)
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/items?kind=` | 목록 |
 | GET | `/api/items/{id}` | 단건 (없으면 404) |
-| POST | `/api/items` | 생성 `{kind, title, body?, status?, prio?, parent_id?}` |
+| POST | `/api/items` | 생성 `{kind, title, body?, status?, prio?, parent_id?, project?}` |
 | PATCH | `/api/items/{id}` | `expected_revision` 필수. 보낸 키만 수정. 본문 null은 빈 문서, parent_id/source_url null은 제거. 제목·상태·우선순위는 유효 값 필수 |
 | DELETE | `/api/items/{id}` | 삭제 (본문 없는 200) |
-| GET | `/api/search?q=&kind=&page_type=` | 검색 (최대 20개) |
+| GET | `/api/search?q=&kind=&page_type=&project=` | 검색 (최대 20개). 빈 `q`는 최근 항목. `project`는 그 프로젝트만 |
 
 - PATCH는 `FIELDS` 화이트리스트로 컬럼명을 거른 뒤에 SQL을 만든다. 이 화이트리스트를 지우면 SQL 인젝션이 생긴다.
 - 이슈 생성·수정은 `agent_body`도 받는다. 생략하면 기존 값을 유지하고, PATCH의 `agent_body: null` 또는 빈 문자열은 에이전트 문서를 비운다. 기존 DB 업그레이드는 백업 후 `scripts/migrate-issue-agent.sql`을 psql로 실행한다(README 참고).

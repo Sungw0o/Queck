@@ -20,11 +20,11 @@ class MarkdownController {
         String title = input.title();
         if (title == null || title.isBlank()) title = body.lines().filter(l -> l.startsWith("# ")).map(l -> l.substring(2)).findFirst().orElse("가져온 문서");
         if ("source".equals(input.pageType())) return repo.ingest(title, body, input.sourceUrl());
-        return repo.create("page", title, body, "", null, null, null, "note", null);
+        return repo.create("page", title, body, "", null, null, null, "note", null, null);
     }
 
     private String markdown(ItemRepository.Item i) {
-        String body = "# " + i.title() + "\n\n> Quack #" + i.id() + " · " + i.pageType() + " · 버전 " + i.revision() + "\n\n";
+        String body = "# " + i.title() + "\n\n> Quack #" + i.id() + " · " + i.pageType() + " · 버전 " + i.revision() + (i.project().isEmpty() ? "" : " · 프로젝트 " + i.project()) + "\n\n";
         if (i.sourceUrl() != null) body += "출처: " + i.sourceUrl() + "\n\n";
         if ("issue".equals(i.kind())) body += "## 사람용 요약\n\n" + i.body() + "\n\n## 에이전트 문서\n\n" + i.agentBody();
         else body += i.body();

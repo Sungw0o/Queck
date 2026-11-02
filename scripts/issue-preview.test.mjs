@@ -11,11 +11,11 @@ const elements = Object.fromEntries(['dlg', 'dlgKey', 'del', 'iPreview', 'iPrevi
   showModal() { this.open = true },
   close() { this.open = false },
 }]));
-const fields = Object.fromEntries(['title', 'body', 'agent_body', 'prio', 'status'].map(name => [name, { value: '' }]));
+const fields = Object.fromEntries(['title', 'body', 'agent_body', 'prio', 'status', 'project'].map(name => [name, { value: '' }]));
 fields[Symbol.iterator] = function* () { yield* Object.values(fields) };
 const errors = [];
 const context = vm.createContext({
-  $: id => elements[id], F: fields, editing: null, issueDoc: 'body', issueSaving: false,
+  $: id => elements[id], F: fields, boardProject: '*', editing: null, issueDoc: 'body', issueSaving: false,
   confirm: () => { throw new Error('Unexpected discard prompt') },
   console: { error: error => errors.push(error) },
   marked: { parse: text => `parsed(${text})` },

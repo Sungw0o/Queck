@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS items (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+-- Plain column additions upgrade existing DBs at startup; '' means no project.
+ALTER TABLE items ADD COLUMN IF NOT EXISTS project text NOT NULL DEFAULT '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS items_source_hash ON items(content_hash) WHERE page_type = 'source';
 CREATE UNIQUE INDEX IF NOT EXISTS items_source_url ON items(source_url) WHERE page_type = 'source' AND source_url IS NOT NULL;
