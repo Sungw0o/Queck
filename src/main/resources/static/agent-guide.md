@@ -24,8 +24,8 @@ Claude Desktop은 프로젝트의 Node 중계 스크립트를 통해 연결합�
 | `get(id)` | 이슈 또는 위키의 전체 원문 조회 |
 | `create(kind, title, body?, agentBody?, status?, prio?, parentId?, project?)` | 새 이슈 또는 일반 메모 작성 |
 | `update(id, expectedRevision, title?, body?, agentBody?, status?, prio?, project?)` | 읽은 버전이 일치할 때 이슈·일반 메모 수정. project 빈 문자열은 프로젝트 해제 |
-| `ingest_source(title, body, sourceUrl?)` | 원문 보존·정규화한 내용의 중복 감지 |
-| `publish_wiki(id?, expectedRevision?, title, body, sources, relatedIds?, summary)` | 출처 버전을 검사하고 위키·연결·로그를 한 번에 발행 |
+| `ingest_source(title, body, sourceUrl?, project?)` | 원문 보존·정규화한 내용의 중복 감지 |
+| `publish_wiki(id?, expectedRevision?, title, body, sources, relatedIds?, summary, project?)` | 출처 버전을 검사하고 위키·연결·로그를 한 번에 발행. 기존 위키는 project를 빼면 그대로 |
 | `wiki_context(view, id?)` | index / sources / links / check / log 조회 |
 | `history(id)` | 저장된 내용 이력 조회 |
 | `restore(id, revision, expectedRevision)` | 사용자 요청에 따라 과거 내용을 새 버전으로 복원 |

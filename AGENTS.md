@@ -111,6 +111,7 @@ src/main/resources/
   - 그 밖의 텍스트는 `esc()`로 이스케이프하거나 `textContent`로 넣는다.
 - 스타일은 **글래스모피즘**이다. 화면을 고치기 전에 **`docs/design.md`를 먼저 읽는다**(토큰, 반경, 컴포넌트 규칙, 마스코트). 색은 `:root` CSS 변수로만 쓰고, `backdrop-filter`는 바깥 패널에만 건다.
 - 단축키: `/` 검색, `n` 새로 만들기, `Ctrl+S` 문서 저장, `Esc` 편집 취소. 저장 안 한 변경이 있으면 취소나 창 닫기 때 확인한다.
+- **프로젝트 범위**: 사이드바 맨 위 `#projectSel` 하나가 보드·문서 트리·사이드바 검색·지식 위키를 함께 거른다(`project` 변수, `inProject()`). 선택은 `localStorage`의 `quack.project`에 기억하며, 저장소를 못 쓰면 "모든 프로젝트"로 시작한다. 새 이슈·문서·원본·위키·가져오기는 `newProject()`(선택한 프로젝트, 전체 보기면 없음)로 만들고 하위 문서는 부모의 프로젝트를 따른다. 다른 프로젝트의 부모를 둔 문서는 트리에서 루트로 보인다.
 - 이슈 다이얼로그 저장은 form의 `submit` 이벤트(`e.submitter.value === 'save'`)에서 처리한다. `dialog`의 `close` 이벤트는 내장 브라우저에서 발생하지 않은 적이 있어서 쓰지 않는다.
 - 이슈 `submit`은 기본 닫기를 막고 저장 성공 후에만 닫는다. `issueSaving` 동안 폼 전체와 취소·Esc·이동을 막으며, 실패하면 폼을 활성화하고 두 문서의 초안을 유지한다. 취소·Esc·해시 이동은 `confirmIssueDiscard()`, 새로고침은 `isIssueDirty()`로 보호한다. 회귀 검사: `node scripts/issue-preview.test.mjs` (CI에서도 실행).
 - **마스코트**: `mascot(mood, size)`와 `hey(mood, 대사)`. 표정과 대사 톤은 `docs/design.md`에 있다. 칸쵸메(금색의 갓슈)를 따라 그린 **팬아트**라서 개인용으로만 쓰고, 공개 배포나 홍보용으로 쓰지 않는다.
@@ -176,11 +177,11 @@ src/main/resources/
 - 기존 DB 업그레이드: 백업 성공 → `scripts/migrate-knowledge.sql` → `schema.sql` → 앱 빌드/시작. 과거 agent_body가 없는 DB는 먼저 `migrate-issue-agent.sql`을 적용한다. README의 PowerShell 명령을 따른다.
 - REST PATCH에는 양의 정수 `expected_revision`이 필수다. 없으면 428, 읽은 버전과 다르면 409다. MCP update는 `expectedRevision`을 사용한다. 충돌 시 새 버전만 대입해 무조건 재시도하지 않는다.
 - 이력은 기능 설치 이후부터 쌓인다. 복원은 과거 내용을 새 버전으로 저장한다. 과거 연결 관계·상위 페이지·삭제 문서 복구는 지원하지 않는다. 삭제하면 해당 이력·로그도 삭제된다. 인용 중인 원본/그 부모의 삭제는 409다.
-- REST: `POST /api/sources {title,body,source_url?}`, `POST /api/wiki/publish {id?,expected_revision?,title,body,sources:[{id,revision}],related_ids?,summary}`, `GET /api/wiki/index`, `/api/wiki/log`, `/api/wiki/check`.
+- REST: `POST /api/sources {title,body,source_url?,project?}`, `POST /api/wiki/publish {id?,expected_revision?,title,body,sources:[{id,revision}],related_ids?,summary,project?}`(기존 위키는 project를 빼면 유지), `GET /api/wiki/index`, `/api/wiki/log`, `/api/wiki/check`.
 - REST: `GET /api/items/{id}/history`, `POST /api/items/{id}/restore {revision,expected_revision}`, `GET /api/items/{id}/links`(outgoing/backlinks), `POST /api/items/{id}/knowledge {expected_revision}`(완료 이슈 원문 스냅샷).
-- REST: `POST /api/markdown/import {markdown,title?,page_type?,source_url?}`(source 또는 일반 note), `GET /api/items/{id}/export`, `GET /api/export`(Markdown ZIP). Markdown 내보내기는 DB 백업이나 완전한 왕복 형식이 아니다. 파일은 UTF-8 .md/.txt만 화면에서 읽는다.
+- REST: `POST /api/markdown/import {markdown,title?,page_type?,source_url?,project?}`(source 또는 일반 note), `GET /api/items/{id}/export`, `GET /api/export`(Markdown ZIP). Markdown 내보내기는 DB 백업이나 완전한 왕복 형식이 아니다. 파일은 UTF-8 .md/.txt만 화면에서 읽는다.
 - MCP 추가 도구: `ingest_source`, `publish_wiki`, `wiki_context`(index/sources/links/check/log), `history`, `restore`, `promote_issue`. 읽기 전용인 wiki_context/history만 기존 search/get과 같은 설정을 쓴다. 쓰기 승인을 완화하지 않는다. MCP update는 이슈/일반 메모만 수정하며 원본은 화면에서, 위키는 publish_wiki로 변경한다.
 - 원본 중복은 NFC·CRLF 정규화·앞뒤 공백 제거 후 SHA-256으로 감지한다. 동일 내용이면 기존 자료를 반환한다. 같은 URL의 다른 본문은 충돌이며 자동 덮어쓰지 않는다. URL은 메타데이터이며 서버에서 접속하지 않는다.
-- 발행은 원본/위키를 잠그고 읽은 버전을 확인한 뒤 본문·출처/관련 링크·로그를 한 트랜잭션으로 저장한다. 같은 위키 제목은 대소문자를 무시하고 중복을 막는다. 일반 편집·복원·출처 버전 변경은 `needs_review`로 표시된다. 버전 일치는 사실성 보증이 아니다.
+- 발행은 원본/위키를 잠그고 읽은 버전을 확인한 뒤 본문·출처/관련 링크·로그를 한 트랜잭션으로 저장한다. 같은 위키 제목은 대소문자를 무시하고 중복을 막는다. 제목·본문이 실제로 바뀐 일반 편집·복원·출처 버전 변경은 `needs_review`로 표시된다. 프로젝트·상위 문서만 바꾸면 표시하지 않는다. 완료 이슈 지식화는 이슈의 프로젝트를 원본·위키에 그대로 쓴다. 버전 일치는 사실성 보증이 아니다.
 - 라우트 `#knowledge`에 색인·원본·점검·로그가 있다. 구조 점검은 출처 누락/변경, 깨진 내부 링크, 역방향 연결 없는 위키를 찾는다. 의미상의 모순은 외부 에이전트가 원문을 읽고 본문/발행 요약에 기록한다. 앱이 LLM을 호출하지 않는다.
 - 검색 REST는 `page_type` 필터도 지원한다. 발췌는 일치 부분 근처 약 300자, `offset`(선택된 본문 UTF-16 위치), `heading`을 반환한다. 평가: `node scripts/rag-eval.mjs`; 통합검사: `node scripts/knowledge-smoke.mjs`. 둘 다 smoke.sh/CI에 포함된다. LLM 답변 사실성 평가는 별도다.

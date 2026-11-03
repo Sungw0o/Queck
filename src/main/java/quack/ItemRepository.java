@@ -136,7 +136,7 @@ public class ItemRepository {
         String role = pageType == null ? "note" : pageType;
         require(Set.of("note", "source", "wiki").contains(role), "문서 유형을 확인해 주세요.");
         require("page".equals(kind) || "note".equals(role), "원본·위키 유형은 문서에서만 사용합니다.");
-        if ("source".equals(role)) return ingest(title, body, sourceUrl).item();
+        if ("source".equals(role)) return ingest(title, body, sourceUrl, project).item();
         String cleanTitle = title(title), cleanBody = text(body), cleanAgent = text(agentBody), cleanProject = project(project);
         if ("issue".equals(kind)) {
             status = status == null ? "todo" : status; prio = prio == null ? "mid" : prio;
@@ -155,14 +155,14 @@ public class ItemRepository {
     }
 
     @Transactional
-    public IngestResult ingest(String title, String body, String sourceUrl) {
-        String cleanTitle = title(title), cleanBody = text(body), cleanUrl = url(sourceUrl);
+    public IngestResult ingest(String title, String body, String sourceUrl, String project) {
+        String cleanTitle = title(title), cleanBody = text(body), cleanUrl = url(sourceUrl), cleanProject = project(project);
         require(!cleanBody.isBlank(), "원본 본문을 입력해 주세요. URL만으로 자동 수집하지 않습니다.");
         String fingerprint = hash(cleanBody);
         var inserted = jdbc.sql("""
-                INSERT INTO items(kind,title,body,page_type,source_url,content_hash)
-                VALUES ('page',:t,:b,'source',:u,:h) ON CONFLICT DO NOTHING RETURNING id""")
-                .param("t", cleanTitle).param("b", cleanBody).param("u", cleanUrl).param("h", fingerprint).query(Long.class).optional();
+                INSERT INTO items(kind,title,body,page_type,source_url,content_hash,project)
+                VALUES ('page',:t,:b,'source',:u,:h,:proj) ON CONFLICT DO NOTHING RETURNING id""")
+                .param("t", cleanTitle).param("b", cleanBody).param("u", cleanUrl).param("h", fingerprint).param("proj", cleanProject).query(Long.class).optional();
         if (inserted.isEmpty()) {
             Item existing = jdbc.sql(SELECT + "WHERE i.page_type = 'source' AND (i.content_hash = :h OR i.source_url = :u) ORDER BY i.id LIMIT 1")
                     .param("h", fingerprint).param("u", cleanUrl).query(Item.class).single();
@@ -209,7 +209,10 @@ public class ItemRepository {
         for (var entry : values.entrySet()) statement = statement.param(entry.getKey(), entry.getValue());
         try { statement.update(); }
         catch (DataIntegrityViolationException e) { throw error(HttpStatus.CONFLICT, "같은 원본 또는 같은 위키 제목이 이미 존재합니다."); }
-        if ("wiki".equals(before.pageType())) jdbc.sql("UPDATE item_links SET target_revision = 0 WHERE from_id = :id AND relation = 'source'").param("id", id).update();
+        // Only a content change needs a source review; moving a wiki to another project or parent does not.
+        boolean contentChanged = values.containsKey("title") && !values.get("title").equals(before.title())
+                || values.containsKey("body") && !values.get("body").equals(before.body());
+        if ("wiki".equals(before.pageType()) && contentChanged) jdbc.sql("UPDATE item_links SET target_revision = 0 WHERE from_id = :id AND relation = 'source'").param("id", id).update();
         snapshot(id); Item item = get(id).orElseThrow(); mentions(item); return Optional.of(item);
     }
 
@@ -246,7 +249,7 @@ public class ItemRepository {
     }
 
     @Transactional
-    public Item publish(Long id, Integer expected, String title, String body, List<SourceRef> sources, List<Long> relatedIds, String summary) {
+    public Item publish(Long id, Integer expected, String title, String body, List<SourceRef> sources, List<Long> relatedIds, String summary, String project) {
         require(sources != null && !sources.isEmpty() && sources.size() <= 100, "원본 자료와 읽은 버전이 1~100개 필요합니다.");
         require(sources.stream().allMatch(s -> s != null && s.id() > 0 && s.revision() > 0), "출처 번호와 버전은 양의 정수여야 합니다.");
         require(summary != null && !summary.isBlank() && summary.length() <= 1000, "변경 요약을 1~1000자로 적어 주세요.");
@@ -256,8 +259,10 @@ public class ItemRepository {
             Item original = lock(source.id()); require("source".equals(original.pageType()), "출처는 원본 자료여야 합니다.");
             version(original, source.revision()); originals.add(original);
         }
-        Item wiki = id == null ? create("page", title, body, "", null, null, null, "wiki", null, null)
-                : update(id, Map.of("title", title(title), "body", text(body), "expected_revision", expected)).orElseThrow();
+        var changes = new HashMap<String, Object>(Map.of("title", title(title), "body", text(body), "expected_revision", expected == null ? 0 : expected));
+        if (project != null) changes.put("project", project);  // omitted: an existing wiki keeps its project
+        Item wiki = id == null ? create("page", title, body, "", null, null, null, "wiki", null, project)
+                : update(id, changes).orElseThrow();
         jdbc.sql("DELETE FROM item_links WHERE from_id = :id AND relation IN ('source','related')").param("id", wiki.id()).update();
         for (Item original : originals) { link(wiki.id(), original.id(), "source", original.revision()); event(wiki.id(), original.id(), "compile", summary); }
         if (relatedIds != null) {
@@ -281,10 +286,10 @@ public class ItemRepository {
         if (existing.isPresent()) return get(existing.get()).orElseThrow();
         String record = "# QK-" + issue.id() + " · " + issue.title() + "\n\n## 사람용 요약\n" + issue.body()
                 + "\n\n## 작업 기록\n" + issue.agentBody() + "\n\n원본 이슈: [QK-" + issue.id() + "](#issue/" + issue.id() + "), 버전 " + issue.revision();
-        Item source = ingest("QK-" + issue.id() + " 작업 결과", record, null).item();
+        Item source = ingest("QK-" + issue.id() + " 작업 결과", record, null, issue.project()).item();
         String wikiTitle = "QK-" + issue.id() + " · " + issue.title();
         Item wiki = publish(null, null, wikiTitle.substring(0, Math.min(300, wikiTitle.length())), record,
-                List.of(new SourceRef(source.id(), source.revision())), List.of(), "완료 이슈의 기록을 원문 그대로 보존 (LLM 요약 아님)");
+                List.of(new SourceRef(source.id(), source.revision())), List.of(), "완료 이슈의 기록을 원문 그대로 보존 (LLM 요약 아님)", issue.project());
         link(wiki.id(), issue.id(), "issue", issue.revision()); event(wiki.id(), source.id(), "promote", "완료 이슈 QK-" + issue.id() + " 지식화"); return wiki;
     }
 

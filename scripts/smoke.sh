@@ -61,6 +61,18 @@ cleared=$(send PATCH "/api/items/$jid" '{"project":"","expected_revision":1}')
 grep -q '"project":""' <<<"$cleared" || fail "project not cleared: $cleared"
 ok "project normalize, filter, validate, clear"
 
+src=$(send POST /api/sources '{"title":"[SMOKE] project source","body":"smoke project source body","project":"smoke-proj"}')
+sid=$(id_of "$src"); IDS+=("$sid")
+grep -q '"project":"smoke-proj"' <<<"$src" || fail "source project: $src"
+wiki=$(send POST /api/wiki/publish "{\"title\":\"[SMOKE] project wiki $$\",\"body\":\"see #docs/$sid\",\"sources\":[{\"id\":$sid,\"revision\":1}],\"summary\":\"smoke\",\"project\":\"smoke-proj\"}")
+wid=$(id_of "$wiki"); IDS=("$wid" "${IDS[@]}")  # delete the wiki before the source it cites
+grep -q '"project":"smoke-proj"' <<<"$wiki" && grep -q '"needs_review":false' <<<"$wiki" || fail "wiki project: $wiki"
+moved=$(send PATCH "/api/items/$wid" '{"project":"smoke-other","expected_revision":1}')
+grep -q '"project":"smoke-other"' <<<"$moved" && grep -q '"needs_review":false' <<<"$moved" || fail "moving a wiki must not need review: $moved"
+edited=$(send PATCH "/api/items/$wid" '{"title":"[SMOKE] project wiki edited","expected_revision":2}')
+grep -q '"needs_review":true' <<<"$edited" || fail "editing wiki content must need review: $edited"
+ok "source and wiki projects, review only on content change"
+
 printf '재발급' > "$TMP/q.txt"
 hits=$(cd "$TMP" && curl -sf -G "$BASE/api/search" --data-urlencode "q@q.txt")  # relative: Windows curl can't read /tmp paths here
 grep -q "\"id\":$pid" <<<"$hits" || fail "korean search missed page $pid: $hits"

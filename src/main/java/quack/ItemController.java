@@ -14,10 +14,10 @@ import org.springframework.web.server.ResponseStatusException;
 class ItemController {
 
     record NewItem(String kind, String title, String body, String agentBody, String status, String prio, Long parentId, String pageType, String sourceUrl, String project) {}
-    record Source(String title, String body, String sourceUrl) {}
+    record Source(String title, String body, String sourceUrl, String project) {}
     record Restore(int revision, Integer expectedRevision) {}
     record Expected(Integer expectedRevision) {}
-    record Publish(Long id, Integer expectedRevision, String title, String body, List<ItemRepository.SourceRef> sources, List<Long> relatedIds, String summary) {}
+    record Publish(Long id, Integer expectedRevision, String title, String body, List<ItemRepository.SourceRef> sources, List<Long> relatedIds, String summary, String project) {}
 
     private final ItemRepository repo;
 
@@ -63,9 +63,9 @@ class ItemController {
     @GetMapping("/items/{id}/links")
     Object links(@PathVariable long id) { get(id); return Map.of("outgoing", repo.links(id, false), "backlinks", repo.links(id, true)); }
     @PostMapping("/sources")
-    Object ingest(@RequestBody Source s) { return repo.ingest(s.title(), s.body(), s.sourceUrl()); }
+    Object ingest(@RequestBody Source s) { return repo.ingest(s.title(), s.body(), s.sourceUrl(), s.project()); }
     @PostMapping("/wiki/publish")
-    Item publish(@RequestBody Publish p) { return repo.publish(p.id(), p.expectedRevision(), p.title(), p.body(), p.sources(), p.relatedIds(), p.summary()); }
+    Item publish(@RequestBody Publish p) { return repo.publish(p.id(), p.expectedRevision(), p.title(), p.body(), p.sources(), p.relatedIds(), p.summary(), p.project()); }
     @GetMapping("/wiki/index")
     Object index() { return repo.list("page").stream().filter(i -> "wiki".equals(i.pageType())).toList(); }
     @GetMapping("/wiki/log")

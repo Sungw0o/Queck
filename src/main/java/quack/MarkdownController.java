@@ -12,15 +12,15 @@ import org.springframework.web.bind.annotation.*;
 class MarkdownController {
     private final ItemRepository repo;
     MarkdownController(ItemRepository repo) { this.repo = repo; }
-    record Import(String markdown, String title, String pageType, String sourceUrl) {}
+    record Import(String markdown, String title, String pageType, String sourceUrl, String project) {}
 
     @PostMapping("/markdown/import")
     Object importMarkdown(@RequestBody Import input) {
         String body = input.markdown() == null ? "" : input.markdown();
         String title = input.title();
         if (title == null || title.isBlank()) title = body.lines().filter(l -> l.startsWith("# ")).map(l -> l.substring(2)).findFirst().orElse("가져온 문서");
-        if ("source".equals(input.pageType())) return repo.ingest(title, body, input.sourceUrl());
-        return repo.create("page", title, body, "", null, null, null, "note", null, null);
+        if ("source".equals(input.pageType())) return repo.ingest(title, body, input.sourceUrl(), input.project());
+        return repo.create("page", title, body, "", null, null, null, "note", null, input.project());
     }
 
     private String markdown(ItemRepository.Item i) {
