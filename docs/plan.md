@@ -135,6 +135,6 @@
 - 완료 조건: 프로젝트를 고르면 모든 화면에서 다른 프로젝트 항목이 보이지 않고, 새로 만든 항목이 그 프로젝트에 들어간다. 위키의 프로젝트만 바꿔도 출처 재검토로 표시되지 않는다.
 
 ## 대기 (사용자 입력 필요)
-- README 캡처: `docs/images/`에 `board.png`, `docs.png`, `claude-search.png`, `dark.png`를 넣고 README의 "캡처 예정" 자리를 이미지로 바꾼다. 실제 데이터가 보이면 안 되는 내용은 가린다.
+- README 캡처: `docs/images/`에 `board.png`, `docs.png`, `claude-search.png`, `dark.png`를 넣고 README "할 수 있는 것" 아래에 "화면" 절로 넣는다(최종 정리 때 빈 자리는 지웠다). 실제 데이터가 보이면 안 되는 내용은 가린다.
 - Claude Desktop 등록: Desktop 밖의 터미널에서 `quack desktop` → 트레이에서 종료 → 다시 켜기. 그 뒤 M3 항목의 완료 조건을 확인한다.
 - Codex 신뢰: 이 폴더를 Codex로 열고 프로젝트 신뢰와 훅 신뢰를 허용한다. 그 뒤 `echo`로 가드 문구를 실행해 막히는지 확인한다(MCP 검색은 확인 끝).
